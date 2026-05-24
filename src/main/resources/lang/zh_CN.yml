@@ -1,0 +1,79 @@
+addon: "<gold>逻辑工艺</gold>"
+
+# 指南配置
+guide:
+  # 按钮名称
+  button:
+    logitech:
+      name: "<gold>逻辑工艺</gold>"
+      lore: "<arrow>单击打开LogiTech~"
+    info:
+      name: "版本与说明"
+    material:
+      name: "基础材料"
+    basic:
+      name: "基础"
+    cargo:
+      name: "货运"
+    singularity:
+      name: "奇点"
+    advanced:
+      name: "进阶"
+    beyond:
+      name: "超越"
+    vanilla:
+      name: "原版"
+    portable:
+      name: "便携式工具"
+    special:
+      name: "特殊"
+    space:
+      name: "空间"
+    generators:
+      name: "发电机"
+    energy:
+      name: "能源"
+    functional:
+      name: "功能性"
+    experimental:
+      name: "实验性"
+    tools:
+      name: "工具"
+    forging:
+      name: "工具与锻造"
+    misc:
+      name: "杂项"
+    magic:
+      name: "魔法"
+    tech:
+      name: "科技"
+  
+  # 页面名称
+  page:
+    logitech: "<gold>逻辑工艺</gold>"
+    info: "版本与说明"
+    material: "基础材料"
+    basic: "基础"
+    cargo: "货运"
+    singularity: "奇点"
+    advanced: "进阶"
+    beyond: "超越"
+    vanilla: "原版"
+    portable: "便携式工具"
+    special: "特殊"
+    space: "空间"
+    generators: "发电机"
+    energy: "能源"
+    functional: "功能性"
+    experimental: "实验性"
+    tools: "工具"
+    forging: "锻造"
+    misc: "杂项"
+    magic: "魔法"
+    tech: "科技"
+
+# 物品名称
+item:
+  storage_bag:
+    name: "便携式存储背包"
+    lore: <arrow> 右键打开存储界面

@@ -1,0 +1,8 @@
+name: LogiTech
+version: test
+main: io.github.lyen.LogiTech.MyAddon
+load: STARTUP
+depend:
+  - Rebar
+  - Pylon
+api-version: "1.21"
