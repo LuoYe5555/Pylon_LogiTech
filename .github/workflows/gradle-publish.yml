@@ -32,12 +32,12 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build with Gradle
-        # 把 setup-java 装好的 JDK 显式传给 Gradle（覆盖 gradle.properties 里写死的本机 Windows 路径），
-        # 并跳过 foojay 自动下载，避免 CI 网络抖动
-        run: >
+        # 用 CI 的 JAVA_HOME 覆盖项目 gradle.properties 里写死的本机 Windows JDK 路径：
+        # 写入用户级 gradle.properties（优先级高于项目级），auto-detect 会自动探测 JAVA_HOME
+        run: |
+          mkdir -p "$HOME/.gradle"
+          echo "org.gradle.java.installations.paths=" > "$HOME/.gradle/gradle.properties"
           ./gradlew build -x test --no-daemon
-          "-Porg.gradle.java.installations.paths=${{ steps.setup_java.outputs.path }}"
-          "-Porg.gradle.java.installations.auto-download=false"
 
       - name: Prepare tag name from commit message
         id: tag
