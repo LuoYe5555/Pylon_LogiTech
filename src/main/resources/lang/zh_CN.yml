@@ -11,69 +11,115 @@ guide:
       name: "版本与说明"
     material:
       name: "基础材料"
-    basic:
-      name: "基础"
-    cargo:
-      name: "货运"
-    singularity:
-      name: "奇点"
-    advanced:
-      name: "进阶"
-    beyond:
-      name: "超越"
-    vanilla:
-      name: "原版"
     portable:
       name: "便携式工具"
-    special:
-      name: "特殊"
-    space:
-      name: "空间"
-    generators:
-      name: "发电机"
-    energy:
-      name: "能源"
-    functional:
-      name: "功能性"
-    experimental:
-      name: "实验性"
-    tools:
-      name: "工具"
-    forging:
-      name: "工具与锻造"
-    misc:
-      name: "杂项"
-    magic:
-      name: "魔法"
-    tech:
-      name: "科技"
+    magic_tools:
+      name: "魔法道具"
+    magic_item:
+      name: "魔法物品"
+    storage:
+      name: "存储"
+    network:
+      name: "网络"
+    admin:
+      name: "<dark_red>管理专用"
+      lore: "<arrow>仅管理员使用"
   
   # 页面名称
   page:
     logitech: "<gold>逻辑工艺</gold>"
     info: "版本与说明"
     material: "基础材料"
-    basic: "基础"
-    cargo: "货运"
-    singularity: "奇点"
-    advanced: "进阶"
-    beyond: "超越"
-    vanilla: "原版"
     portable: "便携式工具"
-    special: "特殊"
-    space: "空间"
-    generators: "发电机"
-    energy: "能源"
-    functional: "功能性"
-    experimental: "实验性"
-    tools: "工具"
-    forging: "锻造"
-    misc: "杂项"
-    magic: "魔法"
-    tech: "科技"
+    magic_tools: "魔法道具"
+    magic_item: "魔法物品"
+    storage: "存储"
+    network: "网络"
+    admin: "<dark_red>管理专用"
+    cheat_guide: "<dark_red>Rebar Guide(作弊版)"
 
 # 物品名称
 item:
   storage_bag:
     name: "便携式存储背包"
     lore: <arrow> 右键打开存储界面
+  portable_enderchest:
+    name: "便携式末影箱"
+    lore: <arrow> 右键打开末影箱
+  portable_trashcan:
+    name: "便携式垃圾桶"
+    lore: <arrow> 右键打开垃圾桶
+  portable_workbench:
+    name: "便携式工作台"
+    lore: <arrow> 右键打开工作台
+  single_item_storage_block:
+    name: "量子存储(∞)"
+    lore: |-
+      <bold></bold>
+      可以存储几乎无限多个物品
+  storage_block:
+    name: "一个普通的存储方块"
+    lore: |-
+      <bold></bold>
+      连接到网络后可以存放大量物品
+  memory_block:
+    name: "存储器"
+    lore: |-
+      放入容量卡后接入网络
+      右键打开卡槽界面
+  memory_card_1k:
+    name: "1K存储卡"
+    lore: |-
+      容量: 1024 个物品
+      放入存储器使用
+      取出不会丢失内容
+  memory_card_4k:
+    name: "4K存储卡"
+    lore: |-
+      容量: 4096 个物品
+      放入存储器使用
+      取出不会丢失内容
+  memory_card_16k:
+    name: "16K存储卡"
+    lore: |-
+      容量: 16384 个物品
+      放入存储器使用
+      取出不会丢失内容
+  network_monitor:
+    name: "网络监视器"
+    lore: |-
+      右键打开界面，选择方向
+      监视该方向相邻的量子存储
+      通过网格存取其内容
+  network_bridge:
+    name: "网桥"
+    lore: |-
+      用来连接相距较远的网络设备
+      相邻放置即可扩展网络
+  network_pusher:
+    name: "网络推送器"
+    lore: |-
+      右键打开界面选择方向
+      周期性地把网络内的物品
+      沿该方向推送进相邻的机器或容器
+      可放置样品物品过滤推送类型
+  network_puller:
+    name: "网络抓取器"
+    lore: |-
+      右键打开界面选择方向
+      周期性地沿该方向从相邻的机器或容器
+      抓取物品存入网络
+  network_grid:
+    name: "网格"
+    lore: |-
+      网格允许你查看网络中所有的物品
+      你也可以直接放入或取出物品
+      支持搜索
+  knowledge_book:
+    name: "学识之书"
+    lore: |-
+      右键以获得全解
+  cheat_guide:
+    name: "<dark_red>Rebar Guide(作弊版)"
+    lore: |-
+      右键打开 Rebar Guide(作弊版)
