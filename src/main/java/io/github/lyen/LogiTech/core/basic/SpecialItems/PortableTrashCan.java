@@ -1,7 +1,7 @@
-package io.github.lyen.LogiTech.core.basic.SpecialItems;
+package io.github.lyen.LogiTech.Core.Basic.SpecialItems;
 
 import io.github.pylonmc.rebar.item.RebarItem;
-import io.github.pylonmc.rebar.item.base.RebarInteractor;
+import io.github.pylonmc.rebar.item.interfaces.InteractRebarItemHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -17,7 +17,7 @@ import org.jetbrains.annotations.NotNull;
  * 便携式垃圾桶
  * 右键打开3*9空间，放入物品后关闭，重新打开就清空（不存储数据）
  */
-public class PortableTrashCan extends RebarItem implements RebarInteractor, Listener {
+public class PortableTrashCan extends RebarItem implements InteractRebarItemHandler, Listener {
 
     private static final String GUI_TITLE = "§7便携式垃圾桶";
     private static final int GUI_SIZE = 27; // 3行9列
@@ -27,7 +27,7 @@ public class PortableTrashCan extends RebarItem implements RebarInteractor, List
     }
 
     @Override
-    public void onUsedToClick(@NotNull PlayerInteractEvent event, @NotNull EventPriority priority) {
+    public void onInteract(@NotNull PlayerInteractEvent event, @NotNull EventPriority priority) {
         if (!event.getAction().isRightClick()) {
             return;
         }

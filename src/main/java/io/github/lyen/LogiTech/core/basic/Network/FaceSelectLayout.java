@@ -1,4 +1,4 @@
-package io.github.lyen.LogiTech.core.basic.Network;
+package io.github.lyen.LogiTech.Core.Basic.Network;
 
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;

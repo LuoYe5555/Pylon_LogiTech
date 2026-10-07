@@ -1,8 +1,8 @@
-package io.github.lyen.LogiTech.core.basic.SpecialItems;
+package io.github.lyen.LogiTech.Core.Basic.SpecialItems;
 
 import io.github.lyen.LogiTech.MyAddon;
 import io.github.pylonmc.rebar.item.RebarItem;
-import io.github.pylonmc.rebar.item.base.RebarInteractor;
+import io.github.pylonmc.rebar.item.interfaces.InteractRebarItemHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -26,7 +26,7 @@ import java.util.Map;
  * 便携式末影箱
  * 右键打开末影箱GUI，数据持久化保存到文件
  */
-public class PortableEnderChest extends RebarItem implements RebarInteractor, Listener {
+public class PortableEnderChest extends RebarItem implements InteractRebarItemHandler, Listener {
 
     private static final String GUI_TITLE = "便携式末影箱";
     private static final int GUI_SLOTS = 27; // 末影箱容量
@@ -88,7 +88,7 @@ public class PortableEnderChest extends RebarItem implements RebarInteractor, Li
     }
 
     @Override
-    public void onUsedToClick(@NotNull PlayerInteractEvent event, @NotNull EventPriority priority) {
+    public void onInteract(@NotNull PlayerInteractEvent event, @NotNull EventPriority priority) {
         if (!event.getAction().isRightClick()) {
             return;
         }

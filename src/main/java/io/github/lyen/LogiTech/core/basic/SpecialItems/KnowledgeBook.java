@@ -1,8 +1,8 @@
-package io.github.lyen.LogiTech.core.basic.SpecialItems;
+package io.github.lyen.LogiTech.Core.Basic.SpecialItems;
 
 import io.github.lyen.LogiTech.MyAddon;
 import io.github.pylonmc.rebar.item.RebarItem;
-import io.github.pylonmc.rebar.item.base.RebarInteractor;
+import io.github.pylonmc.rebar.item.interfaces.InteractRebarItemHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventPriority;
@@ -10,14 +10,14 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
-public class KnowledgeBook extends RebarItem implements RebarInteractor {
+public class KnowledgeBook extends RebarItem implements InteractRebarItemHandler {
 
     public KnowledgeBook(@NotNull ItemStack stack) {
         super(stack);
     }
 
     @Override
-    public void onUsedToClick(@NotNull PlayerInteractEvent event, @NotNull EventPriority priority) {
+    public void onInteract(@NotNull PlayerInteractEvent event, @NotNull EventPriority priority) {
         Player player = event.getPlayer();
         ItemStack item = event.getItem();
         

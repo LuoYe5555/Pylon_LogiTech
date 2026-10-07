@@ -1,8 +1,8 @@
-package io.github.lyen.LogiTech.core.basic.SpecialItems;
+package io.github.lyen.LogiTech.Core.Basic.SpecialItems;
 
 import io.github.lyen.LogiTech.MyAddon;
 import io.github.pylonmc.rebar.item.RebarItem;
-import io.github.pylonmc.rebar.item.base.RebarInteractor;
+import io.github.pylonmc.rebar.item.interfaces.InteractRebarItemHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -32,7 +32,7 @@ import java.util.UUID;
  * 每个背包有独立的UUID，数据存储在物品上，认背包不认人
  * 支持多个背包，背包之间不能堆叠
  */
-public class StorageBag extends RebarItem implements RebarInteractor, Listener {
+public class StorageBag extends RebarItem implements InteractRebarItemHandler, Listener {
 
     // 存储GUI的行数（6行 * 9列 = 54格）
     private static final int GUI_SLOTS = 54;
@@ -148,7 +148,7 @@ public class StorageBag extends RebarItem implements RebarInteractor, Listener {
      * 右键使用时触发
      */
     @Override
-    public void onUsedToClick(@NotNull PlayerInteractEvent event, @NotNull EventPriority priority) {
+    public void onInteract(@NotNull PlayerInteractEvent event, @NotNull EventPriority priority) {
         if (!event.getAction().isRightClick()) {
             return;
         }

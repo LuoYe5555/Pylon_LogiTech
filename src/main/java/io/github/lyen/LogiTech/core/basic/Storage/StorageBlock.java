@@ -1,9 +1,9 @@
-package io.github.lyen.LogiTech.core.Storage;
+package io.github.lyen.LogiTech.Core.Basic.Storage;
 
 import io.github.lyen.LogiTech.MyAddon;
 import io.github.pylonmc.rebar.block.RebarBlock;
-import io.github.pylonmc.rebar.block.base.RebarGuiBlock;
-import io.github.pylonmc.rebar.block.base.RebarVirtualInventoryBlock;
+import io.github.pylonmc.rebar.block.interfaces.GuiRebarBlock;
+import io.github.pylonmc.rebar.block.interfaces.VirtualInventoryRebarBlock;
 import io.github.pylonmc.rebar.block.context.BlockBreakContext;
 import io.github.pylonmc.rebar.block.context.BlockCreateContext;
 import io.github.pylonmc.rebar.item.RebarItem;
@@ -27,7 +27,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
-public class StorageBlock extends RebarBlock implements RebarGuiBlock, RebarVirtualInventoryBlock {
+public class StorageBlock extends RebarBlock implements GuiRebarBlock, VirtualInventoryRebarBlock {
 
     public static class Item extends RebarItem {
         public Item(@NotNull ItemStack stack) {
@@ -134,9 +134,9 @@ public class StorageBlock extends RebarBlock implements RebarGuiBlock, RebarVirt
     }
 
     @Override
-    public void onBreak(@NotNull List<@NotNull ItemStack> drops, @NotNull BlockBreakContext context) {
+    public void onBlockBreak(@NotNull List<@NotNull ItemStack> drops, @NotNull BlockBreakContext context) {
         // 创建存储方块本体掉落
-        ItemStack blockItem = ItemStackBuilder.rebar(Material.LIGHT_GRAY_STAINED_GLASS, io.github.lyen.LogiTech.core.Register.RegisterKeys.STORAGE_BLOCK)
+        ItemStack blockItem = ItemStackBuilder.rebar(Material.LIGHT_GRAY_STAINED_GLASS, io.github.lyen.LogiTech.Core.Register.RegisterKeys.STORAGE_BLOCK)
                 .name("<gold>一个普通的存储方块")
                 .build();
         drops.add(blockItem);

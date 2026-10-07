@@ -1,7 +1,7 @@
-package io.github.lyen.LogiTech.core.basic.SpecialItems;
+package io.github.lyen.LogiTech.Core.Basic.SpecialItems;
 
 import io.github.pylonmc.rebar.item.RebarItem;
-import io.github.pylonmc.rebar.item.base.RebarInteractor;
+import io.github.pylonmc.rebar.item.interfaces.InteractRebarItemHandler;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventPriority;
@@ -13,14 +13,14 @@ import org.jetbrains.annotations.NotNull;
  * 便携式工作台
  * 右键打开真正的工作台界面
  */
-public class PortableWorkbench extends RebarItem implements RebarInteractor {
+public class PortableWorkbench extends RebarItem implements InteractRebarItemHandler {
 
     public PortableWorkbench(@NotNull ItemStack stack) {
         super(stack);
     }
 
     @Override
-    public void onUsedToClick(@NotNull PlayerInteractEvent event, @NotNull EventPriority priority) {
+    public void onInteract(@NotNull PlayerInteractEvent event, @NotNull EventPriority priority) {
         if (!event.getAction().isRightClick()) {
             return;
         }

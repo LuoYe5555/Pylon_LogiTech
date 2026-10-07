@@ -1,8 +1,8 @@
-package io.github.lyen.LogiTech.core.basic.Network;
+package io.github.lyen.LogiTech.Core.Basic.Network;
 
-import io.github.lyen.LogiTech.core.Storage.SingleItemStorageBlock;
+import io.github.lyen.LogiTech.Core.Basic.Storage.SingleItemStorageBlock;
 import io.github.pylonmc.rebar.block.RebarBlock;
-import io.github.pylonmc.rebar.block.base.RebarGuiBlock;
+import io.github.pylonmc.rebar.block.interfaces.GuiRebarBlock;
 import io.github.pylonmc.rebar.block.context.BlockCreateContext;
 import io.github.pylonmc.rebar.item.RebarItem;
 import io.github.pylonmc.rebar.item.builder.ItemStackBuilder;
@@ -30,7 +30,7 @@ import java.util.List;
  * GUI 内点击方位格子切换监视方向（内容是动态渲染的，切换立即生效），不支持存取操作。
  * 量子存储因此只需与监视器相邻即可接入网络。
  */
-public class NetworkMonitorBlock extends NetworkNode implements RebarGuiBlock {
+public class NetworkMonitorBlock extends NetworkNode implements GuiRebarBlock {
 
     public static class Item extends RebarItem {
         public Item(@NotNull ItemStack stack) {

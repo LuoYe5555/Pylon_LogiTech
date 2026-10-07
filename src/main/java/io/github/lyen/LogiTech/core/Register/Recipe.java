@@ -1,10 +1,11 @@
-package io.github.lyen.LogiTech.core.Register;
+package io.github.lyen.LogiTech.Core.Register;
 
 import io.github.lyen.LogiTech.MyAddon;
 import io.github.pylonmc.pylon.PylonItems;
 import io.github.pylonmc.rebar.recipe.RecipeType;
+import io.github.pylonmc.rebar.recipe.vanilla.ShapedRebarRecipe;
 
-import static io.github.lyen.LogiTech.core.basic.SpecialItems.BugItemManager.createBugItem;
+import static io.github.lyen.LogiTech.Core.Basic.SpecialItems.BugItemManager.createBugItem;
 
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -36,7 +37,7 @@ public class Recipe {
         recipe.setIngredient('B', new RecipeChoice.ExactChoice(createBugItem()));
         recipe.setIngredient('C', Material.CHEST);
         recipe.setCategory(CraftingBookCategory.MISC);
-        RecipeType.VANILLA_SHAPED.addRecipe(recipe);
+        RecipeType.VANILLA_SHAPED.addRecipe(ShapedRebarRecipe.fromVanilla(recipe));
     }
 
     private static void registerPortableWorkbenchRecipe() {
@@ -46,7 +47,7 @@ public class Recipe {
         recipe.setIngredient('B', new RecipeChoice.ExactChoice(createBugItem()));
         recipe.setIngredient('C', Material.CRAFTING_TABLE);
         recipe.setCategory(CraftingBookCategory.MISC);
-        RecipeType.VANILLA_SHAPED.addRecipe(recipe);
+        RecipeType.VANILLA_SHAPED.addRecipe(ShapedRebarRecipe.fromVanilla(recipe));
     }
 
     private static void registerPortableEnderChestRecipe() {
@@ -56,7 +57,7 @@ public class Recipe {
         recipe.setIngredient('B', new RecipeChoice.ExactChoice(createBugItem()));
         recipe.setIngredient('E', Material.ENDER_CHEST);
         recipe.setCategory(CraftingBookCategory.MISC);
-        RecipeType.VANILLA_SHAPED.addRecipe(recipe);
+        RecipeType.VANILLA_SHAPED.addRecipe(ShapedRebarRecipe.fromVanilla(recipe));
     }
 
     private static void registerPortableTrashCanRecipe() {
@@ -66,7 +67,7 @@ public class Recipe {
         recipe.setIngredient('B', new RecipeChoice.ExactChoice(createBugItem()));
         recipe.setIngredient('I', Material.IRON_INGOT);
         recipe.setCategory(CraftingBookCategory.MISC);
-        RecipeType.VANILLA_SHAPED.addRecipe(recipe);
+        RecipeType.VANILLA_SHAPED.addRecipe(ShapedRebarRecipe.fromVanilla(recipe));
     }
 
     private static void registerStorageBlockRecipe() {
@@ -76,7 +77,7 @@ public class Recipe {
         recipe.setIngredient('G', Material.GLASS);
         recipe.setIngredient('B', new RecipeChoice.ExactChoice(createBugItem()));
         recipe.setCategory(CraftingBookCategory.MISC);
-        RecipeType.VANILLA_SHAPED.addRecipe(recipe);
+        RecipeType.VANILLA_SHAPED.addRecipe(ShapedRebarRecipe.fromVanilla(recipe));
     }
 
     private static void registerQuantumStorageRecipe() {
@@ -86,7 +87,7 @@ public class Recipe {
         recipe.setIngredient('S', RegisterItems.STORAGE_BLOCK);
         recipe.setIngredient('B', new RecipeChoice.ExactChoice(createBugItem()));
         recipe.setCategory(CraftingBookCategory.MISC);
-        RecipeType.VANILLA_SHAPED.addRecipe(recipe);
+        RecipeType.VANILLA_SHAPED.addRecipe(ShapedRebarRecipe.fromVanilla(recipe));
     }
 
     private static void registerMagicCrystalRecipe() {
@@ -96,7 +97,7 @@ public class Recipe {
         recipe1.shape("N", " ", " ");
         recipe1.setIngredient('N', Material.NETHER_WART);
         recipe1.setCategory(CraftingBookCategory.MISC);
-        RecipeType.VANILLA_SHAPED.addRecipe(recipe1);
+        RecipeType.VANILLA_SHAPED.addRecipe(ShapedRebarRecipe.fromVanilla(recipe1));
 
         // 魔法结晶 II：2x2 魔法结晶 I 合成
         NamespacedKey key2 = new NamespacedKey(MyAddon.getInstance(), "magic_crystal_ii");
@@ -104,7 +105,7 @@ public class Recipe {
         recipe2.shape("II", "II");
         recipe2.setIngredient('I', new RecipeChoice.ExactChoice(RegisterItems.MAGIC_CRYSTAL_I));
         recipe2.setCategory(CraftingBookCategory.MISC);
-        RecipeType.VANILLA_SHAPED.addRecipe(recipe2);
+        RecipeType.VANILLA_SHAPED.addRecipe(ShapedRebarRecipe.fromVanilla(recipe2));
 
         // 魔法结晶 III：2x2 魔法结晶 II 合成
         NamespacedKey key3 = new NamespacedKey(MyAddon.getInstance(), "magic_crystal_iii");
@@ -112,7 +113,7 @@ public class Recipe {
         recipe3.shape("II", "II");
         recipe3.setIngredient('I', new RecipeChoice.ExactChoice(RegisterItems.MAGIC_CRYSTAL_II));
         recipe3.setCategory(CraftingBookCategory.MISC);
-        RecipeType.VANILLA_SHAPED.addRecipe(recipe3);
+        RecipeType.VANILLA_SHAPED.addRecipe(ShapedRebarRecipe.fromVanilla(recipe3));
     }
 
     private static void registerMagicBookCoverRecipe() {
@@ -126,7 +127,7 @@ public class Recipe {
         recipe.setIngredient('I', new RecipeChoice.ExactChoice(RegisterItems.MAGIC_CRYSTAL_II));
         recipe.setIngredient('B', Material.BOOK);
         recipe.setCategory(CraftingBookCategory.MISC);
-        RecipeType.VANILLA_SHAPED.addRecipe(recipe);
+        RecipeType.VANILLA_SHAPED.addRecipe(ShapedRebarRecipe.fromVanilla(recipe));
     }
 
     
@@ -141,7 +142,7 @@ public class Recipe {
         recipe.setIngredient('D', Material.GLASS_BOTTLE);
         recipe.setIngredient('E', Material.WRITABLE_BOOK);
         recipe.setCategory(CraftingBookCategory.MISC);
-        RecipeType.VANILLA_SHAPED.addRecipe(recipe);
+        RecipeType.VANILLA_SHAPED.addRecipe(ShapedRebarRecipe.fromVanilla(recipe));
     }
 
     private static void registerNetworkBlockRecipes() {
@@ -164,7 +165,7 @@ public class Recipe {
         recipe.setIngredient('B', new RecipeChoice.ExactChoice(createBugItem()));
         recipe.setIngredient('S', new RecipeChoice.ExactChoice(RegisterItems.STORAGE_BLOCK));
         recipe.setCategory(CraftingBookCategory.MISC);
-        RecipeType.VANILLA_SHAPED.addRecipe(recipe);
+        RecipeType.VANILLA_SHAPED.addRecipe(ShapedRebarRecipe.fromVanilla(recipe));
     }
 
     /**
@@ -177,6 +178,6 @@ public class Recipe {
         recipe.setIngredient('B', new RecipeChoice.ExactChoice(createBugItem()));
         recipe.setIngredient('P', pane);
         recipe.setCategory(CraftingBookCategory.MISC);
-        RecipeType.VANILLA_SHAPED.addRecipe(recipe);
+        RecipeType.VANILLA_SHAPED.addRecipe(ShapedRebarRecipe.fromVanilla(recipe));
     }
 }

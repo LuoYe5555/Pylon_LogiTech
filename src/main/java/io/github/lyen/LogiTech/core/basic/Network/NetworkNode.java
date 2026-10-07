@@ -1,7 +1,7 @@
-package io.github.lyen.LogiTech.core.basic.Network;
+package io.github.lyen.LogiTech.Core.Basic.Network;
 
-import io.github.lyen.LogiTech.core.Storage.MemoryBlock;
-import io.github.lyen.LogiTech.core.Storage.StorageBlock;
+import io.github.lyen.LogiTech.Core.Basic.Storage.MemoryBlock;
+import io.github.lyen.LogiTech.Core.Basic.Storage.StorageBlock;
 import io.github.pylonmc.rebar.block.RebarBlock;
 import io.github.pylonmc.rebar.block.context.BlockCreateContext;
 import org.bukkit.block.Block;
@@ -38,5 +38,31 @@ public abstract class NetworkNode extends RebarBlock {
      */
     public @NotNull NetworkManager.Network getNetwork() {
         return NetworkManager.findNetwork(this);
+    }
+
+    /**
+     * 同网络中同类流体设备里本块是否为坐标最小的"主设备"。
+     * 多个同类流体设备共享同一容量卡流体池时，Rebar 按各设备上报量结算；
+     * 若每台都独立上报全池余量，多台会重复上报，可能凭空产生/丢失流体。
+     * 因此只让主设备参与 Rebar 的供液/请求结算。
+     */
+    protected boolean isPrimaryFluidDevice(@NotNull Class<?> type) {
+        Block self = getBlock();
+        for (NetworkNode node : getNetwork().getNodes()) {
+            if (type.isInstance(node) && isPosBefore(node.getBlock(), self)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean isPosBefore(@NotNull Block a, @NotNull Block b) {
+        if (a.getX() != b.getX()) {
+            return a.getX() < b.getX();
+        }
+        if (a.getY() != b.getY()) {
+            return a.getY() < b.getY();
+        }
+        return a.getZ() < b.getZ();
     }
 }

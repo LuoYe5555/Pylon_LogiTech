@@ -1,4 +1,4 @@
-package io.github.lyen.LogiTech.core.basic.SpecialItems;
+package io.github.lyen.LogiTech.Core.Basic.SpecialItems;
 
 import io.github.lyen.LogiTech.MyAddon;
 import org.bukkit.configuration.file.YamlConfiguration;

@@ -1,8 +1,9 @@
-package io.github.lyen.LogiTech.core.basic.Network;
+package io.github.lyen.LogiTech.Core.Basic.Network;
 
 import io.github.lyen.LogiTech.MyAddon;
-import io.github.pylonmc.rebar.block.base.RebarGuiBlock;
+import io.github.pylonmc.rebar.block.interfaces.GuiRebarBlock;
 import io.github.pylonmc.rebar.block.context.BlockCreateContext;
+import io.github.pylonmc.rebar.fluid.RebarFluid;
 import io.github.pylonmc.rebar.item.RebarItem;
 import io.github.pylonmc.rebar.item.builder.ItemStackBuilder;
 import io.github.pylonmc.rebar.util.gui.GuiItems;
@@ -31,10 +32,14 @@ import xyz.xenondevs.invui.item.ItemProvider;
 import xyz.xenondevs.invui.window.Window;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.WeakHashMap;
 
 /**
  * 网格：查看并操作网络中的所有物品（类似 Network 附属的网格）。
@@ -42,11 +47,32 @@ import java.util.UUID;
  * - 拿着物品点击"存入"按钮可存入光标物品，Shift 点击存入整个物品栏
  * - 搜索按钮通过聊天输入关键词过滤
  */
-public class NetworkGridBlock extends NetworkNode implements RebarGuiBlock {
+public class NetworkGridBlock extends NetworkNode implements GuiRebarBlock {
 
     public static class Item extends RebarItem {
         public Item(@NotNull ItemStack stack) {
             super(stack);
+        }
+    }
+
+    /** 自动刷新间隔（tick）：10 tick = 0.5 秒 */
+    public static final long AUTO_REFRESH_PERIOD_TICKS = 10L;
+
+    /**
+     * 所有已创建的网格方块（弱引用，方块卸载/回收后自动移出），
+     * 供全局定时任务统一做自动刷新，避免每个方块各开一个定时任务。
+     */
+    private static final Set<NetworkGridBlock> ACTIVE_GRIDS =
+            Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<>()));
+
+    /** 全局定时任务调用：对正被玩家查看的网格做一次自动刷新 */
+    public static void autoRefreshOpenGrids() {
+        synchronized (ACTIVE_GRIDS) {
+            for (NetworkGridBlock grid : ACTIVE_GRIDS) {
+                if (grid.gui != null && !grid.gui.getCurrentViewers().isEmpty()) {
+                    grid.refresh();
+                }
+            }
         }
     }
 
@@ -58,17 +84,22 @@ public class NetworkGridBlock extends NetworkNode implements RebarGuiBlock {
 
     private PagedGui<xyz.xenondevs.invui.item.Item> gui;
 
+    /** 上一次内容签名：仅在物品种类/流体种类变化时才重建内容，否则只重渲染数量 */
+    private String lastContentSignature = "";
+
     /** 输入槽：放入的物品自动存入网络，成功后从槽位消失（网络满时剩余留槽可取回） */
     private final VirtualInventory inputSlot = new VirtualInventory(1);
 
     public NetworkGridBlock(@NotNull Block block, @NotNull BlockCreateContext context) {
         super(block, context);
         initInputSlot();
+        ACTIVE_GRIDS.add(this);
     }
 
     public NetworkGridBlock(@NotNull Block block, @NotNull PersistentDataContainer pdc) {
         super(block, pdc);
         initInputSlot();
+        ACTIVE_GRIDS.add(this);
     }
 
     /**
@@ -124,6 +155,7 @@ public class NetworkGridBlock extends NetworkNode implements RebarGuiBlock {
                 .addIngredient('N', GuiItems.pageNext())
                 .setContent(buildContent())
                 .build();
+        lastContentSignature = buildContentSignature();
         return gui;
     }
 
@@ -147,6 +179,12 @@ public class NetworkGridBlock extends NetworkNode implements RebarGuiBlock {
                 items.add((xyz.xenondevs.invui.item.Item) new GridItem(entry.template));
             }
         }
+        // 流体条目只读展示：流体只能通过流体输入器/输出器与管道交互，不能直接拿取
+        for (Map.Entry<RebarFluid, Double> fluidEntry : network.collectFluids().entrySet()) {
+            if (fluidEntry.getValue() > 0 && matchesFluid(fluidEntry.getKey(), filter)) {
+                items.add((xyz.xenondevs.invui.item.Item) new FluidGridItem(fluidEntry.getKey()));
+            }
+        }
         return items;
     }
 
@@ -155,12 +193,52 @@ public class NetworkGridBlock extends NetworkNode implements RebarGuiBlock {
     }
 
     /**
-     * 重新扫描网络并刷新网格显示
+     * 重新扫描网络并刷新网格显示。
+     * 内容种类（物品类型/流体种类/筛选词）变化时才重建分页内容并恢复原页码，
+     * 只有数量变化时仅通知窗口重渲染，避免自动刷新打断玩家翻页。
      */
     private void refresh() {
-        if (gui != null) {
-            gui.setContent(buildContent());
+        if (gui == null) {
+            return;
         }
+        String signature = buildContentSignature();
+        if (signature.equals(lastContentSignature)) {
+            gui.notifyWindows();
+            return;
+        }
+        int page = gui.getPage();
+        gui.setContent(buildContent());
+        // 内容变短可能使原页码越界，夹到合法范围
+        gui.setPage(Math.min(page, Math.max(0, gui.getPageCount() - 1)));
+        lastContentSignature = signature;
+    }
+
+    /**
+     * 当前展示内容的签名：筛选词 + 通过筛选的物品类型和流体类型（不含数量）。
+     * 数量变化不改变签名，新增/消失一种物品或流体才改变。
+     */
+    private @NotNull String buildContentSignature() {
+        NetworkManager.Network network = getNetwork();
+        if (network.isEmpty()) {
+            return "empty|" + currentFilter();
+        }
+        String filter = currentFilter();
+        StringBuilder sb = new StringBuilder("f:").append(filter == null ? "" : filter);
+        for (NetworkManager.StackEntry entry : network.collectEntries()) {
+            if (matches(entry.template, filter)) {
+                sb.append('|').append(typeKey(entry.template));
+            }
+        }
+        for (Map.Entry<RebarFluid, Double> fluidEntry : network.collectFluids().entrySet()) {
+            if (fluidEntry.getValue() > 0 && matchesFluid(fluidEntry.getKey(), filter)) {
+                sb.append("|F:").append(fluidEntry.getKey().getKey());
+            }
+        }
+        return sb.toString();
+    }
+
+    private static @NotNull String typeKey(@NotNull ItemStack item) {
+        return item.getType().name() + "|" + (item.hasItemMeta() ? item.getItemMeta().hashCode() : "0");
     }
 
     /**
@@ -181,6 +259,17 @@ public class NetworkGridBlock extends NetworkNode implements RebarGuiBlock {
     private static String plainText(@NotNull Component component) {
         return net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
                 .serialize(component);
+    }
+
+    /**
+     * 判断流体是否匹配搜索关键词（匹配流体 ID，忽略大小写）
+     */
+    private static boolean matchesFluid(@NotNull RebarFluid fluid, @Nullable String filter) {
+        if (filter == null || filter.isEmpty()) {
+            return true;
+        }
+        return fluid.getKey().getKey().toLowerCase().contains(filter.toLowerCase())
+                || fluid.getKey().getNamespace().toLowerCase().contains(filter.toLowerCase());
     }
 
     /**
@@ -256,6 +345,34 @@ public class NetworkGridBlock extends NetworkNode implements RebarGuiBlock {
             } else {
                 notifyWindows();
             }
+        }
+    }
+
+    /**
+     * 网格中的一类流体：只读显示全网该流体总量（mB / 桶）。
+     * 流体没有可直接拿取的物品形态，只能通过流体输入器/输出器与 Rebar 流体管道交互。
+     */
+    private class FluidGridItem extends AbstractItem {
+        private final RebarFluid fluid;
+
+        FluidGridItem(@NotNull RebarFluid fluid) {
+            this.fluid = fluid;
+        }
+
+        @Override
+        public @NotNull ItemProvider getItemProvider(@NotNull Player viewer) {
+            double total = getNetwork().getFluidTotal(fluid);
+            String mb = (total == Math.floor(total)) ? Long.toString((long) total) : Double.toString(total);
+            return ItemStackBuilder.of(fluid.getItem())
+                    .name(Component.text("§b流体: §f" + fluid.getKey().getKey()))
+                    .lore(List.of(
+                            Component.text("§7总量: §e" + mb + " mB §7(§f" + String.format("%.2f", total / 1000.0) + " §7桶)"),
+                            Component.text("§8流体只能通过流体输入器/输出器存取")));
+        }
+
+        @Override
+        public void handleClick(@NotNull ClickType clickType, @NotNull Player player, @NotNull Click click) {
+            // 只读条目
         }
     }
 

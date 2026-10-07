@@ -1,4 +1,4 @@
-package io.github.lyen.LogiTech.core.Register;
+package io.github.lyen.LogiTech.Core.Register;
 
 import org.bukkit.NamespacedKey;
 
@@ -24,6 +24,11 @@ public class RegisterKeys {
     public static final NamespacedKey MEMORY_CARD_1K = new NamespacedKey(MOD_ID, "memory_card_1k");
     public static final NamespacedKey MEMORY_CARD_4K = new NamespacedKey(MOD_ID, "memory_card_4k");
     public static final NamespacedKey MEMORY_CARD_16K = new NamespacedKey(MOD_ID, "memory_card_16k");
+    public static final NamespacedKey MEMORY_CARD_64K = new NamespacedKey(MOD_ID, "memory_card_64k");
+    public static final NamespacedKey MEMORY_CARD_256K = new NamespacedKey(MOD_ID, "memory_card_256k");
+    public static final NamespacedKey MEMORY_CARD_1M = new NamespacedKey(MOD_ID, "memory_card_1m");
+    public static final NamespacedKey MEMORY_CARD_4M = new NamespacedKey(MOD_ID, "memory_card_4m");
+    public static final NamespacedKey MEMORY_CARD_16M = new NamespacedKey(MOD_ID, "memory_card_16m");
     /** 容量卡 PDC：存储的物品（Base64 序列化）与数量 */
     public static final NamespacedKey CARD_ITEM_KEY = new NamespacedKey(MOD_ID, "card_item");
     public static final NamespacedKey CARD_AMOUNT_KEY = new NamespacedKey(MOD_ID, "card_amount");
@@ -48,5 +53,13 @@ public class RegisterKeys {
     public static final NamespacedKey NETWORK_PUSHER = new NamespacedKey(MOD_ID, "network_pusher");
     public static final NamespacedKey NETWORK_PULLER = new NamespacedKey(MOD_ID, "network_puller");
     public static final NamespacedKey NETWORK_GRID = new NamespacedKey(MOD_ID, "network_grid");
+
+    // 流体网络方块（兼容 Rebar 流体管道）
+    public static final NamespacedKey NETWORK_FLUID_EXPORTER = new NamespacedKey(MOD_ID, "network_fluid_exporter");
+    public static final NamespacedKey NETWORK_FLUID_IMPORTER = new NamespacedKey(MOD_ID, "network_fluid_importer");
+    /** 容量卡 PDC：存储的流体（Base64 序列化 key+mB） */
+    public static final NamespacedKey CARD_FLUID_KEY = new NamespacedKey(MOD_ID, "card_fluid");
+    /** 流体容量标记（INTEGER，mB），有此标记说明卡等级对应流体容量已初始化 */
+    public static final NamespacedKey CARD_FLUID_CAPACITY_KEY = new NamespacedKey(MOD_ID, "card_fluid_capacity");
 
 }

@@ -1,4 +1,4 @@
-package io.github.lyen.LogiTech.core.Register;
+package io.github.lyen.LogiTech.Core.Register;
 
 import io.github.pylonmc.pylon.PylonPages;
 import io.github.pylonmc.rebar.content.guide.RebarGuide;

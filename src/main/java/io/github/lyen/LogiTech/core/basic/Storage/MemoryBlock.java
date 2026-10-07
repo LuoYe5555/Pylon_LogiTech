@@ -1,9 +1,10 @@
-package io.github.lyen.LogiTech.core.Storage;
+package io.github.lyen.LogiTech.Core.Basic.Storage;
 
-import io.github.lyen.LogiTech.core.basic.Network.NetworkManager;
-import io.github.lyen.LogiTech.core.basic.SpecialItems.MemoryCard;
+import io.github.lyen.LogiTech.Core.Basic.Network.NetworkManager;
+import io.github.lyen.LogiTech.Core.Basic.SpecialItems.MemoryCard;
 import io.github.pylonmc.rebar.block.RebarBlock;
-import io.github.pylonmc.rebar.block.base.RebarGuiBlock;
+import io.github.pylonmc.rebar.block.interfaces.BlockBreakRebarBlockHandler;
+import io.github.pylonmc.rebar.block.interfaces.GuiRebarBlock;
 import io.github.pylonmc.rebar.block.context.BlockBreakContext;
 import io.github.pylonmc.rebar.block.context.BlockCreateContext;
 import io.github.pylonmc.rebar.item.RebarItem;
@@ -34,7 +35,7 @@ import java.util.Map;
  * 右键打开 GUI，中间 3x3 共 9 个卡槽，可混插卡；卡中的物品会接入网络供网格存取。
  * 容量卡限制的是物品总数量、不限种类；数据保存在卡片物品自身，取出卡不丢失内容。
  */
-public class MemoryBlock extends RebarBlock implements RebarGuiBlock {
+public class MemoryBlock extends RebarBlock implements GuiRebarBlock, BlockBreakRebarBlockHandler {
 
     public static class Item extends RebarItem {
         public Item(@NotNull ItemStack stack) {
@@ -78,7 +79,7 @@ public class MemoryBlock extends RebarBlock implements RebarGuiBlock {
             }
             if (newItem != null && !newItem.getType().isAir()) {
                 // 无编号卡补发编号（会同时写容量标记），确保识别与存取链路完整
-                io.github.lyen.LogiTech.core.basic.SpecialItems.MemoryCardItem.ensureId(newItem);
+                io.github.lyen.LogiTech.Core.Basic.SpecialItems.MemoryCardItem.ensureId(newItem);
             }
             notifyCardChange();
         });
@@ -96,6 +97,9 @@ public class MemoryBlock extends RebarBlock implements RebarGuiBlock {
                         for (int i = 0; i < cards.length && i < cardSlot.getSize(); i++) {
                             ItemStack card = cards[i];
                             if (card != null && !card.getType().isAir()) {
+                                // 重启直接还原的卡没经过"放入"事件，补一次编号分配：
+                                // 已有编号是 no-op；无编号卡补发，保证解析缓存与名称兜底一致
+                                io.github.lyen.LogiTech.Core.Basic.SpecialItems.MemoryCardItem.ensureId(card);
                                 cardSlot.setItem(null, i, card);
                             }
                         }
@@ -116,6 +120,7 @@ public class MemoryBlock extends RebarBlock implements RebarGuiBlock {
             try (var in = new java.io.ByteArrayInputStream(bytes);
                  var dataInput = new org.bukkit.util.io.BukkitObjectInputStream(in)) {
                 if (dataInput.readObject() instanceof ItemStack card && !card.getType().isAir()) {
+                    io.github.lyen.LogiTech.Core.Basic.SpecialItems.MemoryCardItem.ensureId(card);
                     cardSlot.setItem(null, 0, card);
                 }
             }
@@ -276,6 +281,116 @@ public class MemoryBlock extends RebarBlock implements RebarGuiBlock {
         return result;
     }
 
+    /**
+     * 把所有卡的流体合并进 merged（流体输出器供液查询用）
+     */
+    public void collectFluids(@NotNull List<MemoryCard.FluidEntry> merged) {
+        for (int i = 0; i < cardSlot.getSize(); i++) {
+            ItemStack card = getCardInSlot(i);
+            if (card == null) {
+                continue;
+            }
+            merged.addAll(MemoryCard.getFluidEntries(card));
+        }
+    }
+
+    /**
+     * 所有卡中某流体的总量（mB）
+     */
+    public double getFluidTotal(@NotNull io.github.pylonmc.rebar.fluid.RebarFluid fluid) {
+        double total = 0;
+        for (int i = 0; i < cardSlot.getSize(); i++) {
+            ItemStack card = getCardInSlot(i);
+            if (card == null) {
+                continue;
+            }
+            total += MemoryCard.getFluidTotal(card, fluid);
+        }
+        return total;
+    }
+
+    /**
+     * 所有卡的流体总容量（mB）
+     */
+    public double getFluidCapacity() {
+        double total = 0;
+        for (int i = 0; i < cardSlot.getSize(); i++) {
+            ItemStack card = getCardInSlot(i);
+            if (card == null) {
+                continue;
+            }
+            total += MemoryCard.getFluidCapacity(card);
+        }
+        return total;
+    }
+
+    /**
+     * 所有卡的流体已用量（mB）
+     */
+    public double getFluidStoredAmount() {
+        double total = 0;
+        for (int i = 0; i < cardSlot.getSize(); i++) {
+            ItemStack card = getCardInSlot(i);
+            if (card == null) {
+                continue;
+            }
+            total += MemoryCard.getFluidStoredAmount(card);
+        }
+        return total;
+    }
+
+    /**
+     * 向各卡存入流体（可跨卡分配）
+     *
+     * @return 实际存入的 mB
+     */
+    public double depositFluid(@NotNull io.github.pylonmc.rebar.fluid.RebarFluid fluid, double amountMb) {
+        double remaining = amountMb;
+        double deposited = 0;
+        for (int i = 0; i < cardSlot.getSize() && remaining > 0; i++) {
+            ItemStack card = getCardInSlot(i);
+            if (card == null) {
+                continue;
+            }
+            double n = MemoryCard.depositFluid(card, fluid, remaining);
+            if (n > 0) {
+                saveCard(i, card);
+                deposited += n;
+                remaining -= n;
+            }
+        }
+        if (deposited > 0) {
+            notifyCardChange();
+        }
+        return deposited;
+    }
+
+    /**
+     * 从各卡取出流体（可跨卡凑量）
+     *
+     * @return 实际取出的 mB
+     */
+    public double withdrawFluid(@NotNull io.github.pylonmc.rebar.fluid.RebarFluid fluid, double amountMb) {
+        double remaining = amountMb;
+        double withdrawn = 0;
+        for (int i = 0; i < cardSlot.getSize() && remaining > 0; i++) {
+            ItemStack card = getCardInSlot(i);
+            if (card == null) {
+                continue;
+            }
+            double n = MemoryCard.withdrawFluid(card, fluid, remaining);
+            if (n > 0) {
+                saveCard(i, card);
+                withdrawn += n;
+                remaining -= n;
+            }
+        }
+        if (withdrawn > 0) {
+            notifyCardChange();
+        }
+        return withdrawn;
+    }
+
     private void notifyCardChange() {
         if (gui != null) {
             gui.notifyWindows();
@@ -356,7 +471,7 @@ public class MemoryBlock extends RebarBlock implements RebarGuiBlock {
     }
 
     @Override
-    public void onBreak(@NotNull List<@NotNull ItemStack> drops, @NotNull BlockBreakContext context) {
+    public void onBlockBreak(@NotNull List<@NotNull ItemStack> drops, @NotNull BlockBreakContext context) {
         // 掉落卡槽中的所有容量卡（方块本体由 Rebar 默认逻辑处理）
         for (int i = 0; i < cardSlot.getSize(); i++) {
             ItemStack card = cardSlot.getItem(i);

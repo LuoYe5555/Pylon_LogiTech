@@ -1,12 +1,13 @@
-package io.github.lyen.LogiTech.core.basic.SpecialItems;
+package io.github.lyen.LogiTech.Core.Basic.SpecialItems;
 
-import io.github.lyen.LogiTech.core.Register.RegisterKeys;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import io.github.lyen.LogiTech.Core.Register.RegisterKeys;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -17,7 +18,7 @@ import java.util.List;
 
 /**
  * 容量卡（类似 AE 存储元件）：数据保存在卡片物品自身的 PDC 中，卡片不会消耗。
- * 容量限制的是物品总数量、不限种类：1K 卡可存 1024 个、4K 卡 4096 个、16K 卡 16384 个，
+ * 容量限制的是物品总数量、不限种类
  * 种类任意。每种物品的模板（含自定义名/lore/附魔等完整 ItemMeta）序列化保存，取出原样还原。
  */
 public final class MemoryCard {
@@ -26,20 +27,28 @@ public final class MemoryCard {
     public static final int CAPACITY_1K = 1024;
     public static final int CAPACITY_4K = 4096;
     public static final int CAPACITY_16K = 16384;
+    public static final int CAPACITY_64K = 65536;
+    public static final int CAPACITY_256K = 262144;
+    public static final int CAPACITY_1M = 1048576;
+    public static final int CAPACITY_4M = 4194304;
+    public static final int CAPACITY_16M = 16777216;
 
     private MemoryCard() {
     }
 
     /**
      * 该物品是否是本插件的容量卡
-     * 唱片材质是现行卡（1K=CAT / 4K=BLOCKS / 16K=FAR）
+     * 唱片材质：1K=CAT / 4K=BLOCKS / 16K=FAR / 64K=CHIRP / 256K=WAIT /
+     * 1M=STRAD / 4M=MELLOHI / 16M=MALL
      */
     public static boolean isMemoryCard(@Nullable ItemStack item) {
         if (item == null || item.getType().isAir() || !item.hasItemMeta()) {
             return false;
         }
         return switch (item.getType()) {
-            case MUSIC_DISC_CAT, MUSIC_DISC_BLOCKS, MUSIC_DISC_FAR -> isCardKey(item);
+            case MUSIC_DISC_CAT, MUSIC_DISC_BLOCKS, MUSIC_DISC_FAR,
+                 MUSIC_DISC_CHIRP, MUSIC_DISC_WAIT, MUSIC_DISC_STRAD,
+                 MUSIC_DISC_MELLOHI, MUSIC_DISC_MALL -> isCardKey(item);
             default -> false;
         };
     }
@@ -60,7 +69,6 @@ public final class MemoryCard {
 
     /**
      * 获取卡片总容量（非容量卡返回 0）
-     * 唱片材质是现行卡（1K=CAT / 4K=BLOCKS / 16K=FAR）
      */
     public static int getCapacity(@NotNull ItemStack card) {
         if (!isMemoryCard(card)) {
@@ -70,24 +78,40 @@ public final class MemoryCard {
             case MUSIC_DISC_CAT -> CAPACITY_1K;
             case MUSIC_DISC_BLOCKS -> CAPACITY_4K;
             case MUSIC_DISC_FAR -> CAPACITY_16K;
+            case MUSIC_DISC_CHIRP -> CAPACITY_64K;
+            case MUSIC_DISC_WAIT -> CAPACITY_256K;
+            case MUSIC_DISC_STRAD -> CAPACITY_1M;
+            case MUSIC_DISC_MELLOHI -> CAPACITY_4M;
+            case MUSIC_DISC_MALL -> CAPACITY_16M;
             default -> 0;
         };
     }
 
     /**
-     * 读取卡中所有已存物品（模板含完整 ItemMeta + 各自数量）
+     * 读取卡中所有已存物品（模板含完整 ItemMeta + 各自数量）。
+     * 走 CardDataCache：同一张卡内容未变时不重复 Base64 解码与反序列化。
      */
     public static @NotNull List<@NotNull StoredEntry> getEntries(@NotNull ItemStack card) {
-        List<StoredEntry> entries = new ArrayList<>();
         ItemMeta meta = card.getItemMeta();
         if (meta == null) {
-            return entries;
+            return new ArrayList<>();
         }
         String encoded = meta.getPersistentDataContainer()
                 .get(RegisterKeys.CARD_ITEM_KEY, PersistentDataType.STRING);
         if (encoded == null) {
-            return entries;
+            return new ArrayList<>();
         }
+        long cardId = MemoryCardItem.getId(card);
+        List<StoredEntry> entries = CardDataCache.getItemEntries(cardId, encoded, MemoryCard::decodeItemEntries);
+        // 返回副本，避免调用方的遍历/修改污染缓存（缓存本身在卡片写入时即失效）
+        return new ArrayList<>(entries);
+    }
+
+    /**
+     * 解析物品区编码字符串（Base64 + ItemStack[]/long[]）
+     */
+    private static @NotNull List<StoredEntry> decodeItemEntries(@NotNull String encoded) {
+        List<StoredEntry> entries = new ArrayList<>();
         try {
             byte[] bytes = Base64.getDecoder().decode(encoded);
             try (var in = new ByteArrayInputStream(bytes);
@@ -219,11 +243,13 @@ public final class MemoryCard {
             return;
         }
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
+        long cardId = MemoryCardItem.getId(card);
         if (entries.isEmpty()) {
             // 关键：getItemMeta 返回的是副本，清空后也必须 setItemMeta 写回，否则清空操作丢失，
             // 卡会永远"残留"最后一种物品，推送器因此无限取货
             pdc.remove(RegisterKeys.CARD_ITEM_KEY);
             card.setItemMeta(meta);
+            CardDataCache.invalidateItem(cardId);
             return;
         }
         try {
@@ -246,6 +272,7 @@ public final class MemoryCard {
             return;
         }
         card.setItemMeta(meta);
+        CardDataCache.invalidateItem(cardId);
     }
 
     /**
@@ -273,5 +300,234 @@ public final class MemoryCard {
         void setAmount(long amount) {
             this.amount = amount;
         }
+    }
+
+    // ==================== 流体存储区（同一张卡，与物品区独立） ====================
+
+    /** 流体容量（mB）：与物品容量同比例（约 7.8125 mB/物品），最高 16M 卡 = 131072000 mB */
+    public static final int FLUID_CAPACITY_1K = 8000;
+    public static final int FLUID_CAPACITY_4K = 32000;
+    public static final int FLUID_CAPACITY_16K = 128000;
+    public static final int FLUID_CAPACITY_64K = 512000;
+    public static final int FLUID_CAPACITY_256K = 2048000;
+    public static final int FLUID_CAPACITY_1M = 8192000;
+    public static final int FLUID_CAPACITY_4M = 32768000;
+    public static final int FLUID_CAPACITY_16M = 131072000;
+
+    /**
+     * 卡的流体容量（mB，非容量卡返回 0）。物品卡与流体卡通用：每张卡物品容量与流体容量各自独立
+     */
+    public static int getFluidCapacity(@NotNull ItemStack card) {
+        if (!isMemoryCard(card)) {
+            return 0;
+        }
+        return switch (card.getType()) {
+            case MUSIC_DISC_CAT -> FLUID_CAPACITY_1K;
+            case MUSIC_DISC_BLOCKS -> FLUID_CAPACITY_4K;
+            case MUSIC_DISC_FAR -> FLUID_CAPACITY_16K;
+            case MUSIC_DISC_CHIRP -> FLUID_CAPACITY_64K;
+            case MUSIC_DISC_WAIT -> FLUID_CAPACITY_256K;
+            case MUSIC_DISC_STRAD -> FLUID_CAPACITY_1M;
+            case MUSIC_DISC_MELLOHI -> FLUID_CAPACITY_4M;
+            case MUSIC_DISC_MALL -> FLUID_CAPACITY_16M;
+            default -> 0;
+        };
+    }
+
+    /**
+     * 卡内一种流体：流体类型 + 数量（mB）
+     */
+    public static final class FluidEntry {
+
+        private final io.github.pylonmc.rebar.fluid.RebarFluid fluid;
+        private double amountMb;
+
+        FluidEntry(@NotNull io.github.pylonmc.rebar.fluid.RebarFluid fluid, double amountMb) {
+            this.fluid = fluid;
+            this.amountMb = amountMb;
+        }
+
+        public @NotNull io.github.pylonmc.rebar.fluid.RebarFluid fluid() {
+            return fluid;
+        }
+
+        public double amountMb() {
+            return amountMb;
+        }
+
+        void setAmountMb(double amountMb) {
+            this.amountMb = amountMb;
+        }
+    }
+
+    /**
+     * 卡内流体条目（流体 key + mB 数组序列化在 CARD_FLUID_KEY）。
+     * 走 CardDataCache：内容未变时不重复解码反序列化。
+     */
+    public static @NotNull List<@NotNull FluidEntry> getFluidEntries(@NotNull ItemStack card) {
+        ItemMeta meta = card.getItemMeta();
+        if (meta == null) {
+            return new ArrayList<>();
+        }
+        String encoded = meta.getPersistentDataContainer()
+                .get(RegisterKeys.CARD_FLUID_KEY, PersistentDataType.STRING);
+        if (encoded == null) {
+            return new ArrayList<>();
+        }
+        long cardId = MemoryCardItem.getId(card);
+        return new ArrayList<>(CardDataCache.getFluidEntries(cardId, encoded, MemoryCard::decodeFluidEntries));
+    }
+
+    /**
+     * 解析流体区编码字符串（Base64 + String[]/double[]）
+     */
+    private static @NotNull List<FluidEntry> decodeFluidEntries(@NotNull String encoded) {
+        List<FluidEntry> entries = new ArrayList<>();
+        try {
+            byte[] bytes = Base64.getDecoder().decode(encoded);
+            try (var in = new ByteArrayInputStream(bytes);
+                 var dataInput = new org.bukkit.util.io.BukkitObjectInputStream(in)) {
+                Object keys = dataInput.readObject();
+                Object amounts = dataInput.readObject();
+                if (keys instanceof String[] keyArr && amounts instanceof double[] amountArr) {
+                    int n = Math.min(keyArr.length, amountArr.length);
+                    for (int i = 0; i < n; i++) {
+                        var fluid = io.github.pylonmc.rebar.registry.RebarRegistry.FLUIDS
+                                .get(org.bukkit.NamespacedKey.fromString(keyArr[i]));
+                        if (fluid != null && amountArr[i] > 0) {
+                            entries.add(new FluidEntry(fluid, amountArr[i]));
+                        }
+                    }
+                }
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return entries;
+    }
+
+    /**
+     * 卡内流体总量（mB）
+     */
+    public static double getFluidStoredAmount(@NotNull ItemStack card) {
+        double total = 0;
+        for (FluidEntry entry : getFluidEntries(card)) {
+            total += entry.amountMb();
+        }
+        return total;
+    }
+
+    /**
+     * 卡内某流体的数量（mB）
+     */
+    public static double getFluidTotal(@NotNull ItemStack card, @NotNull io.github.pylonmc.rebar.fluid.RebarFluid fluid) {
+        for (FluidEntry entry : getFluidEntries(card)) {
+            if (entry.fluid().equals(fluid)) {
+                return entry.amountMb();
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * 向卡中存入流体（不限种类，总量不超过卡的流体容量）
+     *
+     * @return 实际存入的 mB
+     */
+    public static double depositFluid(@NotNull ItemStack card, @NotNull io.github.pylonmc.rebar.fluid.RebarFluid fluid,
+                                     double amountMb) {
+        double capacity = getFluidCapacity(card);
+        if (capacity <= 0 || amountMb <= 0) {
+            return 0;
+        }
+        List<FluidEntry> entries = getFluidEntries(card);
+        double used = 0;
+        for (FluidEntry entry : entries) {
+            used += entry.amountMb();
+        }
+        double canStore = Math.min(amountMb, capacity - used);
+        if (canStore <= 0) {
+            return 0;
+        }
+        // 同类累加
+        for (FluidEntry entry : entries) {
+            if (entry.fluid().equals(fluid)) {
+                entry.setAmountMb(entry.amountMb() + canStore);
+                saveFluidEntries(card, entries);
+                return canStore;
+            }
+        }
+        // 新流体
+        entries.add(new FluidEntry(fluid, canStore));
+        saveFluidEntries(card, entries);
+        return canStore;
+    }
+
+    /**
+     * 从卡中取出流体
+     *
+     * @return 实际取出的 mB（卡内无该流体或数量不足时取出剩余全部）
+     */
+    public static double withdrawFluid(@NotNull ItemStack card, @NotNull io.github.pylonmc.rebar.fluid.RebarFluid fluid,
+                                       double amountMb) {
+        List<FluidEntry> entries = getFluidEntries(card);
+        for (int i = 0; i < entries.size(); i++) {
+            FluidEntry entry = entries.get(i);
+            if (!entry.fluid().equals(fluid)) {
+                continue;
+            }
+            double take = Math.min(amountMb, entry.amountMb());
+            if (take <= 0) {
+                return 0;
+            }
+            double remaining = entry.amountMb() - take;
+            if (remaining > 0) {
+                entry.setAmountMb(remaining);
+            } else {
+                entries.remove(i);
+            }
+            saveFluidEntries(card, entries);
+            return take;
+        }
+        return 0;
+    }
+
+    /**
+     * 写回流体条目（key 数组 + mB 数组分开序列化；空条目时移除键并写回）
+     */
+    private static void saveFluidEntries(@NotNull ItemStack card, @NotNull List<@NotNull FluidEntry> entries) {
+        ItemMeta meta = card.getItemMeta();
+        if (meta == null) {
+            return;
+        }
+        PersistentDataContainer pdc = meta.getPersistentDataContainer();
+        long cardId = MemoryCardItem.getId(card);
+        if (entries.isEmpty()) {
+            // getItemMeta 返回副本，清空后也必须写回，否则清空丢失（与物品区同类坑）
+            pdc.remove(RegisterKeys.CARD_FLUID_KEY);
+            card.setItemMeta(meta);
+            CardDataCache.invalidateFluid(cardId);
+            return;
+        }
+        try {
+            String[] keys = new String[entries.size()];
+            double[] amounts = new double[entries.size()];
+            for (int i = 0; i < entries.size(); i++) {
+                keys[i] = entries.get(i).fluid().getKey().toString();
+                amounts[i] = entries.get(i).amountMb();
+            }
+            var bytes = new ByteArrayOutputStream();
+            try (var dataOutput = new org.bukkit.util.io.BukkitObjectOutputStream(bytes)) {
+                dataOutput.writeObject(keys);
+                dataOutput.writeObject(amounts);
+            }
+            pdc.set(RegisterKeys.CARD_FLUID_KEY, PersistentDataType.STRING,
+                    Base64.getEncoder().encodeToString(bytes.toByteArray()));
+        } catch (IOException e) {
+            e.printStackTrace();
+            return;
+        }
+        card.setItemMeta(meta);
+        CardDataCache.invalidateFluid(cardId);
     }
 }

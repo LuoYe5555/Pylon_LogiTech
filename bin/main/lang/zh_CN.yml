@@ -72,19 +72,41 @@ item:
     lore: |-
       容量: 1024 个物品
       放入存储器使用
-      取出不会丢失内容
   memory_card_4k:
     name: "4K存储卡"
     lore: |-
       容量: 4096 个物品
       放入存储器使用
-      取出不会丢失内容
   memory_card_16k:
     name: "16K存储卡"
     lore: |-
       容量: 16384 个物品
       放入存储器使用
-      取出不会丢失内容
+  memory_card_64k:
+    name: "64K存储卡"
+    lore: |-
+      容量: 65536 个物品
+      放入存储器使用
+  memory_card_256k:
+    name: "256K存储卡"
+    lore: |-
+      容量: 262144 个物品
+      放入存储器使用
+  memory_card_1m:
+    name: "1M存储卡"
+    lore: |-
+      容量: 1048576 个物品
+      放入存储器使用
+  memory_card_4m:
+    name: "4M存储卡"
+    lore: |-
+      容量: 4194304 个物品
+      放入存储器使用
+  memory_card_16m:
+    name: "16M存储卡"
+    lore: |-
+      容量: 16777216 个物品
+      放入存储器使用
   network_monitor:
     name: "网络监视器"
     lore: |-
@@ -115,6 +137,20 @@ item:
       网格允许你查看网络中所有的物品
       你也可以直接放入或取出物品
       支持搜索
+  network_fluid_exporter:
+    name: "流体输出器"
+    lore: |-
+      放置时朝向你的一面为流体输出口
+      把网络容量卡中存储的流体供给流体管道
+      右键打开界面设置允许输出的流体种类
+      需与存储器放在同一网络中
+  network_fluid_importer:
+    name: "流体输入器"
+    lore: |-
+      放置时朝向你的一面为流体输入口
+      把流体管道送来的流体存入网络容量卡
+      右键打开界面设置允许存入的流体种类
+      需与存储器放在同一网络中
   knowledge_book:
     name: "学识之书"
     lore: |-

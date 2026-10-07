@@ -1,7 +1,7 @@
-package io.github.lyen.LogiTech.core.basic.Network;
+package io.github.lyen.LogiTech.Core.Basic.Network;
 
-import io.github.pylonmc.rebar.block.base.RebarGuiBlock;
-import io.github.pylonmc.rebar.block.base.RebarTickingBlock;
+import io.github.pylonmc.rebar.block.interfaces.GuiRebarBlock;
+import io.github.pylonmc.rebar.block.interfaces.TickingRebarBlock;
 import io.github.pylonmc.rebar.block.context.BlockCreateContext;
 import io.github.pylonmc.rebar.item.RebarItem;
 import io.github.pylonmc.rebar.logistics.slot.LogisticSlot;
@@ -21,7 +21,7 @@ import java.util.List;
  * 网络抓取器：周期性地沿设定方向从相邻的机器/容器抓取物品存入网络。
  * 右键打开 UI 可选择工作方向。
  */
-public class NetworkPullerBlock extends NetworkNode implements RebarTickingBlock, RebarGuiBlock {
+public class NetworkPullerBlock extends NetworkNode implements TickingRebarBlock, GuiRebarBlock {
 
     public static class Item extends RebarItem {
         public Item(@NotNull ItemStack stack) {

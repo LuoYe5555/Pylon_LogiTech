@@ -1,4 +1,4 @@
-package io.github.lyen.LogiTech.core.basic.AbstractItems;
+package io.github.lyen.LogiTech.Core.Basic.AbstractItems;
 
 import io.github.pylonmc.rebar.item.builder.ItemStackBuilder;
 import org.bukkit.Bukkit;

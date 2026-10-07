@@ -1,4 +1,4 @@
-package io.github.lyen.LogiTech.core.basic.Network;
+package io.github.lyen.LogiTech.Core.Basic.Network;
 
 import io.github.pylonmc.rebar.block.RebarBlock;
 import io.github.pylonmc.rebar.i18n.RebarTranslator;
@@ -53,7 +53,7 @@ final class FaceSelectItem extends AbstractItem {
         if (!loaded) {
             icon = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
         } else {
-            icon = neighborItem(neighbor);
+            icon = neighborItem(neighbor, viewer);
         }
         if (icon.getType().isAir()) {
             icon = new ItemStack(Material.STRUCTURE_VOID);
@@ -66,8 +66,8 @@ final class FaceSelectItem extends AbstractItem {
         lore.add(Component.text(face == current ? "§a✔ 当前方向" : "§7点击选择"));
         // 方块名 + 自带 lore（空气/未加载没有额外信息）
         if (loaded && !neighbor.getType().isAir()) {
-            lore.add(Component.text("§f" + neighborName(neighbor)));
-            lore.addAll(neighborLore(neighbor));
+            lore.add(Component.text("§f" + neighborName(neighbor, viewer)));
+            lore.addAll(neighborLore(neighbor, viewer));
         }
         // 被选中的当前方向：图标加附魔光效，一眼可辨
         var provider = ItemStackBuilder.of(icon)
@@ -94,10 +94,10 @@ final class FaceSelectItem extends AbstractItem {
     /**
      * 邻居方块的可显示物品：Rebar 方块用其拾取物（带翻译键名），原版用方块本身
      */
-    private static ItemStack neighborItem(@NotNull Block neighbor) {
+    private static ItemStack neighborItem(@NotNull Block neighbor, @NotNull Player viewer) {
         RebarBlock rebar = RebarBlock.getRebarBlock(neighbor);
         if (rebar != null) {
-            ItemStack pick = rebar.getPickItem();
+            ItemStack pick = rebar.getPickItem(viewer);
             if (pick != null) {
                 return pick;
             }
@@ -109,10 +109,10 @@ final class FaceSelectItem extends AbstractItem {
      * 邻居方块的显示名：用 Rebar 的物品翻译流程在服务端渲染成文字。
      * Rebar 物品渲染出物品名，原版方块渲染出本地化方块名。
      */
-    private static String neighborName(@NotNull Block neighbor) {
-        ItemStack info = neighborItem(neighbor).clone();
+    private static String neighborName(@NotNull Block neighbor, @NotNull Player viewer) {
+        ItemStack info = neighborItem(neighbor, viewer).clone();
         try {
-            RebarTranslator.Companion.translateItem(info, java.util.Locale.CHINA);
+            RebarTranslator.translateItem(info, viewer);
         } catch (Exception ignored) {
         }
         Component name = info.getData(DataComponentTypes.ITEM_NAME);
@@ -142,10 +142,10 @@ final class FaceSelectItem extends AbstractItem {
     /**
      * 邻居方块物品自带的 lore（Rebar 物品的翻译键 lore 也会被渲染成文字）
      */
-    private static List<Component> neighborLore(@NotNull Block neighbor) {
-        ItemStack info = neighborItem(neighbor).clone();
+    private static List<Component> neighborLore(@NotNull Block neighbor, @NotNull Player viewer) {
+        ItemStack info = neighborItem(neighbor, viewer).clone();
         try {
-            RebarTranslator.Companion.translateItem(info, java.util.Locale.CHINA);
+            RebarTranslator.translateItem(info, viewer);
         } catch (Exception ignored) {
         }
         ItemLore itemLore = info.getData(DataComponentTypes.LORE);

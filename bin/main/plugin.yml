@@ -1,5 +1,5 @@
 name: LogiTech
-version: 1.0.0
+version: test
 main: io.github.lyen.LogiTech.MyAddon
 load: STARTUP
 depend:

@@ -1,7 +1,7 @@
-package io.github.lyen.LogiTech.core.basic.Network;
+package io.github.lyen.LogiTech.Core.Basic.Network;
 
-import io.github.pylonmc.rebar.block.base.RebarGuiBlock;
-import io.github.pylonmc.rebar.block.base.RebarTickingBlock;
+import io.github.pylonmc.rebar.block.interfaces.GuiRebarBlock;
+import io.github.pylonmc.rebar.block.interfaces.TickingRebarBlock;
 import io.github.pylonmc.rebar.block.context.BlockCreateContext;
 import io.github.pylonmc.rebar.item.RebarItem;
 import io.github.pylonmc.rebar.item.builder.ItemStackBuilder;
@@ -24,14 +24,16 @@ import xyz.xenondevs.invui.inventory.VirtualInventory;
 import xyz.xenondevs.invui.item.AbstractItem;
 import xyz.xenondevs.invui.item.ItemProvider;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * 网络推送器：周期性地把网络内的物品沿设定方向推送进相邻的机器/容器。
- * 右键打开 UI 可选择工作方向，并把样品物品放入过滤槽（物品不会消耗）；
- * 未设置过滤物品时推送任意物品。
+ * 右键打开 UI：左侧 3×3 格子放过滤样品（物品不会消耗），并可选择工作方向。
+ * 【必须放入至少一个样品】才会推送，没放任何样品时推送器不工作；放多个样品时，
+ * 槽内已有同类物品按样品匹配，空槽则按样品顺序尝试送出。
  */
-public class NetworkPusherBlock extends NetworkNode implements RebarTickingBlock, RebarGuiBlock {
+public class NetworkPusherBlock extends NetworkNode implements TickingRebarBlock, GuiRebarBlock {
 
     public static class Item extends RebarItem {
         public Item(@NotNull ItemStack stack) {
@@ -50,9 +52,22 @@ public class NetworkPusherBlock extends NetworkNode implements RebarTickingBlock
     /** 工作间隔（tick），20 tick = 1 秒 */
     private static final int TICK_INTERVAL = 20;
 
+    /** 过滤槽数量（左侧 3×3） */
+    private static final int FILTER_SLOT_COUNT = 9;
+
+    /**
+     * 推送器专用 3x9 结构：左侧第 2-4 列三行为 3×3 过滤槽 F，i 为状态说明，
+     * 右侧六格保留六面方位选择（与 FaceSelectLayout 相同位置）。
+     */
+    private static final String[] STRUCTURE = {
+            "# F F F # # N # U",
+            "# F F F # W # E #",
+            "# F F F # # S # D"
+    };
+
     private BlockFace face = BlockFace.UP;
-    /** 过滤样品；null 表示不限制类型。样品本身不属于网络物品，只是模板 */
-    private ItemStack filterItem;
+    /** 过滤样品列表；为空表示未设置任何过滤，此时推送器不工作。样品只是模板，不属于网络物品 */
+    private final List<ItemStack> filterItems = new ArrayList<>();
 
     private Gui gui;
 
@@ -74,8 +89,15 @@ public class NetworkPusherBlock extends NetworkNode implements RebarTickingBlock
                 try (var in = new java.io.ByteArrayInputStream(bytes);
                      var dataInput = new org.bukkit.util.io.BukkitObjectInputStream(in)) {
                     Object read = dataInput.readObject();
-                    if (read instanceof ItemStack stack && !stack.getType().isAir()) {
-                        filterItem = stack;
+                    if (read instanceof ItemStack[] arr) {
+                        for (ItemStack stack : arr) {
+                            if (stack != null && !stack.getType().isAir()) {
+                                filterItems.add(stack);
+                            }
+                        }
+                    } else if (read instanceof ItemStack stack && !stack.getType().isAir()) {
+                        // 兼容旧版本：只有一个样品
+                        filterItems.add(stack);
                     }
                 }
             } catch (Exception e) {
@@ -87,22 +109,28 @@ public class NetworkPusherBlock extends NetworkNode implements RebarTickingBlock
     @Override
     public void write(@NotNull PersistentDataContainer pdc) {
         pdc.set(FACE_KEY, PersistentDataType.STRING, face.name());
-        if (filterItem != null) {
-            try {
-                var bytes = new java.io.ByteArrayOutputStream();
-                try (var dataOutput = new org.bukkit.util.io.BukkitObjectOutputStream(bytes)) {
-                    dataOutput.writeObject(filterItem);
-                }
-                pdc.set(FILTER_KEY, PersistentDataType.STRING,
-                        java.util.Base64.getEncoder().encodeToString(bytes.toByteArray()));
-            } catch (Exception e) {
-                e.printStackTrace();
+        if (filterItems.isEmpty()) {
+            pdc.remove(FILTER_KEY);
+            return;
+        }
+        try {
+            var bytes = new java.io.ByteArrayOutputStream();
+            try (var dataOutput = new org.bukkit.util.io.BukkitObjectOutputStream(bytes)) {
+                dataOutput.writeObject(filterItems.toArray(new ItemStack[0]));
             }
+            pdc.set(FILTER_KEY, PersistentDataType.STRING,
+                    java.util.Base64.getEncoder().encodeToString(bytes.toByteArray()));
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
     @Override
     public void tick() {
+        // 没放任何样品时不推送任何东西
+        if (filterItems.isEmpty()) {
+            return;
+        }
         Block target = getBlock().getRelative(face);
         NetworkManager.Network network = getNetwork();
         if (network.isEmpty() || NetworkManager.isSameNetworkMember(target, network)) {
@@ -116,36 +144,47 @@ public class NetworkPusherBlock extends NetworkNode implements RebarTickingBlock
     }
 
     /**
-     * 尝试向目标槽位推送一份物品（受过滤样品限制）
+     * 尝试向目标槽位推送一份物品（只推送过滤样品内的类型）
      */
     private void pushOnce(@NotNull NetworkManager.Network network, @NotNull List<@NotNull LogisticSlot> slots) {
         for (LogisticSlot slot : slots) {
             ItemStack current = slot.getItemStack();
             long space;
-            ItemStack wanted; // null 表示槽位为空，随便给什么都可以
+            boolean empty = current == null || current.getType().isAir();
 
-            if (current == null || current.getType().isAir()) {
+            if (empty) {
                 space = 64;
-                wanted = null;
             } else {
-                wanted = current;
+                if (!matchesFilter(current)) {
+                    continue; // 槽里已有物品但不是任何样品类型：跳过，不能污染该槽
+                }
                 space = slot.getMaxAmount(current) - slot.getAmount();
             }
             if (space <= 0) {
                 continue;
             }
-            if (!matchesFilter(wanted)) {
-                continue;
-            }
 
             int take = (int) Math.min(Math.min(TRANSFER_RATE, space), Integer.MAX_VALUE);
-            ItemStack template = wanted != null ? wanted : filterItem;
-            ItemStack withdrawn = network.withdraw(template, take);
+
+            ItemStack withdrawn;
+            if (empty) {
+                // 空槽：按样品顺序依次尝试从网络取出
+                withdrawn = null;
+                for (ItemStack sample : filterItems) {
+                    withdrawn = network.withdraw(sample, take);
+                    if (withdrawn != null && withdrawn.getAmount() > 0) {
+                        break;
+                    }
+                }
+            } else {
+                // 非空且已匹配：取同类
+                withdrawn = network.withdraw(current, take);
+            }
             if (withdrawn == null || withdrawn.getAmount() <= 0) {
                 continue;
             }
 
-            if (wanted == null) {
+            if (empty) {
                 slot.set(withdrawn, withdrawn.getAmount());
             } else {
                 slot.set(current, slot.getAmount() + withdrawn.getAmount());
@@ -155,29 +194,42 @@ public class NetworkPusherBlock extends NetworkNode implements RebarTickingBlock
     }
 
     /**
-     * 过滤样品是否允许推送该类型
+     * 目标物品是否匹配某个过滤样品
      */
     private boolean matchesFilter(@Nullable ItemStack target) {
-        if (filterItem == null) {
-            return true;
+        if (target == null || target.getType().isAir()) {
+            return false;
         }
-        return target != null && target.isSimilar(filterItem);
+        for (ItemStack sample : filterItems) {
+            if (target.isSimilar(sample)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
     public @NotNull Gui createGui() {
-        VirtualInventory filterInv = new VirtualInventory(1);
+        VirtualInventory filterInv = new VirtualInventory(FILTER_SLOT_COUNT);
+        // 还原已保存的样品（GUI 每次打开都会重建；先装填再挂变更处理器，避免无谓触发）
+        for (int i = 0; i < filterItems.size() && i < FILTER_SLOT_COUNT; i++) {
+            filterInv.setItem(null, i, filterItems.get(i).clone());
+        }
         filterInv.addPostUpdateHandler(event -> {
-            // 玩家放入/取出样品后更新过滤并刷新显示
-            ItemStack sample = filterInv.getItem(0);
-            setFilterItem(sample == null || sample.getType().isAir() ? null : sample);
+            // 玩家放入/取出样品后重建过滤列表并刷新说明项
+            filterItems.clear();
+            for (ItemStack stack : filterInv.getItems()) {
+                if (stack != null && !stack.getType().isAir()) {
+                    filterItems.add(stack.clone());
+                }
+            }
             notifyFilterChange();
         });
         var builder = Gui.builder()
-                .setStructure(FaceSelectLayout.STRUCTURE)
+                .setStructure(STRUCTURE)
                 .addIngredient('#', GuiItems.background())
-                .addIngredient('F', filterInv)
-                .addIngredient('R', new FilterStatusItem());
+                .addIngredient('i', new FilterStatusItem())
+                .addIngredient('F', filterInv);
         FaceSelectLayout.addFaceItems(builder, getBlock(), this::getFace, this::setFace);
         gui = builder.build();
         return gui;
@@ -190,7 +242,7 @@ public class NetworkPusherBlock extends NetworkNode implements RebarTickingBlock
     }
 
     /**
-     * 过滤状态显示项
+     * 过滤状态说明项（左上角）
      */
     private class FilterStatusItem extends AbstractItem {
         @Override
@@ -202,23 +254,27 @@ public class NetworkPusherBlock extends NetworkNode implements RebarTickingBlock
         public void handleClick(@NotNull ClickType clickType, @NotNull Player player, @NotNull Click click) {
         }
     }
+
     /**
      * 过滤状态显示文本
      */
     private @NotNull ItemProvider filterDisplay() {
-        if (filterItem == null) {
+        if (filterItems.isEmpty()) {
             return ItemStackBuilder.of(Material.STRUCTURE_VOID)
-                    .name(Component.text("§e未设置过滤"))
+                    .name(Component.text("§c未放入样品"))
                     .lore(List.of(
-                            Component.text("§7把样品物品放入上方过滤槽"),
+                            Component.text("§7把样品放入右侧 3×3 格子"),
                             Component.text("§7样品不会消耗，仅作为模板"),
-                            Component.text("§7未设置时推送任意物品")));
+                            Component.text("§c没有样品时推送器不工作")));
         }
-        return ItemStackBuilder.of(Material.PAPER)
-                .name(Component.text("§a过滤: " + filterItem.getType().name()))
-                .lore(List.of(
-                        Component.text("§7只推送样品同类物品"),
-                        Component.text("§8样品保存在过滤槽中")));
+        var lines = new java.util.ArrayList<Component>();
+        lines.add(Component.text("§7只推送下列类型的物品"));
+        for (ItemStack sample : filterItems) {
+            lines.add(Component.text("§8- §f" + sample.getType().name()));
+        }
+        return ItemStackBuilder.of(Material.HOPPER)
+                .name(Component.text("§a过滤中 (" + filterItems.size() + " 种)"))
+                .lore(lines);
     }
 
     @Override
@@ -232,13 +288,5 @@ public class NetworkPusherBlock extends NetworkNode implements RebarTickingBlock
 
     public void setFace(@NotNull BlockFace face) {
         this.face = face;
-    }
-
-    public @Nullable ItemStack getFilterItem() {
-        return filterItem;
-    }
-
-    public void setFilterItem(@Nullable ItemStack item) {
-        this.filterItem = item == null || item.getType().isAir() ? null : item.clone();
     }
 }

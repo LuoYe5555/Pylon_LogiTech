@@ -1,9 +1,12 @@
-package io.github.lyen.LogiTech.core.basic.Network;
+package io.github.lyen.LogiTech.Core.Basic.Network;
 
-import io.github.lyen.LogiTech.core.Storage.MemoryBlock;
-import io.github.lyen.LogiTech.core.Storage.SingleItemStorageBlock;
-import io.github.lyen.LogiTech.core.Storage.StorageBlock;
+import io.github.lyen.LogiTech.Core.Basic.SpecialItems.MemoryCard;
+import io.github.lyen.LogiTech.Core.Basic.Storage.MemoryBlock;
+import io.github.lyen.LogiTech.Core.Basic.Storage.SingleItemStorageBlock;
+import io.github.lyen.LogiTech.Core.Basic.Storage.StorageBlock;
+import io.github.lyen.LogiTech.Core.Util.TickClock;
 import io.github.pylonmc.rebar.block.RebarBlock;
+import io.github.pylonmc.rebar.fluid.RebarFluid;
 import io.github.pylonmc.rebar.logistics.LogisticGroup;
 import io.github.pylonmc.rebar.logistics.LogisticGroupType;
 import io.github.pylonmc.rebar.logistics.slot.LogisticSlot;
@@ -20,12 +23,15 @@ import xyz.xenondevs.invui.inventory.event.UpdateReason;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * 网络搜索与物品聚合。
@@ -44,10 +50,41 @@ public final class NetworkManager {
     private NetworkManager() {
     }
 
+    /** 同 tick 网络拓扑缓存的键（世界 + 坐标） */
+    private record TopologyKey(@NotNull UUID world, int x, int y, int z) {
+        static TopologyKey of(@NotNull Block block) {
+            return new TopologyKey(block.getWorld().getUID(), block.getX(), block.getY(), block.getZ());
+        }
+    }
+
+    /** 同 tick 网络拓扑缓存：网格一次重绘内对同一网络的数十次 getNetwork 只做一次洪泛 */
+    private static final Map<TopologyKey, Network> TOPOLOGY_CACHE = new HashMap<>();
+    private static int topologyTick = Integer.MIN_VALUE;
+
     /**
-     * 从起点洪泛搜索它所在的整张网络
+     * 从起点洪泛搜索它所在的整张网络。
+     * 同一 tick 内对同一起点的搜索直接复用结果（网络内的内容是实时的，
+     * 缓存的只是拓扑结构），下一 tick 自动清空重搜以感知方块增删。
      */
     public static @NotNull Network findNetwork(@NotNull NetworkNode origin) {
+        int now = TickClock.current();
+        if (now != topologyTick) {
+            // 进入新 tick：上一 tick 的缓存全部过期，清空避免方块位置无限累积
+            TOPOLOGY_CACHE.clear();
+            topologyTick = now;
+        }
+        TopologyKey key = TopologyKey.of(origin.getBlock());
+        Network cached = TOPOLOGY_CACHE.get(key);
+        if (cached != null) {
+            return cached;
+        }
+
+        Network network = doFindNetwork(origin);
+        TOPOLOGY_CACHE.put(key, network);
+        return network;
+    }
+
+    private static @NotNull Network doFindNetwork(@NotNull NetworkNode origin) {
         Network network = new Network();
         Set<Block> visited = new HashSet<>();
         Deque<Block> queue = new ArrayDeque<>();
@@ -155,7 +192,7 @@ public final class NetworkManager {
 
         // Rebar 物流机器：按物流组类型过滤
         RebarBlock rebar = RebarBlock.getRebarBlock(target);
-        if (rebar instanceof io.github.pylonmc.rebar.block.base.RebarLogisticBlock logistic) {
+        if (rebar instanceof io.github.pylonmc.rebar.block.interfaces.LogisticRebarBlock logistic) {
             List<LogisticSlot> slots = new ArrayList<>();
             for (LogisticGroup group : logistic.getLogisticGroups().values()) {
                 LogisticGroupType type = group.getSlotType();
@@ -178,7 +215,7 @@ public final class NetworkManager {
         if (target.getState() instanceof InventoryHolder holder) {
             List<LogisticSlot> slots = new ArrayList<>();
             for (int i = 0; i < holder.getInventory().getSize(); i++) {
-                slots.add(new VanillaInventoryLogisticSlot(holder.getInventory(), i));
+                slots.add(new VanillaInventoryLogisticSlot(target, holder.getInventory(), i));
             }
             return slots;
         }
@@ -211,6 +248,12 @@ public final class NetworkManager {
         /** 监视器桥接进来的量子存储（按方块位置去重） */
         private final List<SingleItemStorageBlock> monitoredStorages = new ArrayList<>();
         private final Set<Block> seenMonitored = new HashSet<>();
+
+        /** 同 tick 聚合快照：网格每个物品图标各自查数量时共享同一份统计，避免 N+1 全量扫描 */
+        private int itemSnapshotTick = Integer.MIN_VALUE;
+        private List<StackEntry> itemSnapshot = Collections.emptyList();
+        private int fluidSnapshotTick = Integer.MIN_VALUE;
+        private Map<RebarFluid, Double> fluidSnapshot = Collections.emptyMap();
 
         void add(RebarBlock block) {
             if (block instanceof StorageBlock storage) {
@@ -256,9 +299,16 @@ public final class NetworkManager {
         }
 
         /**
-         * 统计全网所有物品，按类型合并
+         * 统计全网所有物品，按类型合并。
+         * 同一 tick 内只真正聚合一次（快照），网格构建列表与每个图标的数量查询共享结果。
+         * 返回的列表为只读快照，调用方不得修改。
          */
         public @NotNull List<@NotNull StackEntry> collectEntries() {
+            int now = TickClock.current();
+            if (itemSnapshotTick == now) {
+                return itemSnapshot;
+            }
+
             Map<String, StackEntry> merged = new LinkedHashMap<>();
             for (StorageBlock storage : storages) {
                 VirtualInventory inv = storage.getStorageInventory();
@@ -278,7 +328,15 @@ public final class NetworkManager {
                     merge(merged, stored, single.getStoredAmount());
                 }
             }
-            return new ArrayList<>(merged.values());
+            itemSnapshot = Collections.unmodifiableList(new ArrayList<>(merged.values()));
+            itemSnapshotTick = now;
+            return itemSnapshot;
+        }
+
+        /** 本网络发生存取后使快照失效，保证同 tick 后续查询立即看到新数量 */
+        public void invalidateSnapshots() {
+            itemSnapshotTick = Integer.MIN_VALUE;
+            fluidSnapshotTick = Integer.MIN_VALUE;
         }
 
         private static void merge(Map<String, StackEntry> merged, ItemStack item, long amount) {
@@ -305,28 +363,46 @@ public final class NetworkManager {
         }
 
         /**
-         * 查询某类物品在全网的总数
+         * 查询某类物品在全网的总数。
+         * 直接查同 tick 聚合快照，不再为每个图标重新扫描所有存储和容量卡。
          */
         public long getTotal(@NotNull ItemStack template) {
             long total = 0;
-            for (StorageBlock storage : storages) {
-                VirtualInventory inv = storage.getStorageInventory();
-                for (ItemStack item : inv.getItems()) {
-                    if (item != null && !item.getType().isAir() && item.isSimilar(template)) {
-                        total += item.getAmount();
-                    }
-                }
-            }
-            for (MemoryBlock memory : memories) {
-                total += memory.getTotal(template);
-            }
-            for (SingleItemStorageBlock single : monitoredStorages) {
-                ItemStack stored = single.getStoredItem();
-                if (stored != null && stored.isSimilar(template)) {
-                    total += single.getStoredAmount();
+            for (StackEntry entry : collectEntries()) {
+                if (entry.template.isSimilar(template)) {
+                    total += entry.total;
                 }
             }
             return total;
+        }
+
+        /**
+         * 查询某类流体在全网容量卡中的总量（mB），直接查同 tick 流体快照
+         */
+        public double getFluidTotal(@NotNull RebarFluid fluid) {
+            return collectFluids().getOrDefault(fluid, 0.0);
+        }
+
+        /**
+         * 统计全网容量卡中的流体，按种类合并（mB）。同一 tick 内只聚合一次。
+         * 返回的映射为只读快照，调用方不得修改。
+         */
+        public @NotNull Map<@NotNull RebarFluid, @NotNull Double> collectFluids() {
+            int now = TickClock.current();
+            if (fluidSnapshotTick == now) {
+                return fluidSnapshot;
+            }
+            Map<RebarFluid, Double> merged = new LinkedHashMap<>();
+            for (MemoryBlock memory : memories) {
+                List<MemoryCard.FluidEntry> entries = new ArrayList<>();
+                memory.collectFluids(entries);
+                for (MemoryCard.FluidEntry entry : entries) {
+                    merged.merge(entry.fluid(), entry.amountMb(), Double::sum);
+                }
+            }
+            fluidSnapshot = Collections.unmodifiableMap(merged);
+            fluidSnapshotTick = now;
+            return fluidSnapshot;
         }
 
         /**
@@ -373,6 +449,7 @@ public final class NetworkManager {
             }
 
             stack.setAmount(remaining);
+            invalidateSnapshots();
             return original - remaining;
         }
 
@@ -456,6 +533,7 @@ public final class NetworkManager {
                 }
             }
 
+            invalidateSnapshots();
             return result;
         }
     }

@@ -1,9 +1,9 @@
-package io.github.lyen.LogiTech.core.Storage;
+package io.github.lyen.LogiTech.Core.Basic.Storage;
 
 import io.github.pylonmc.rebar.block.RebarBlock;
-import io.github.pylonmc.rebar.block.base.RebarGuiBlock;
-import io.github.pylonmc.rebar.block.base.RebarLogisticBlock;
-import io.github.pylonmc.rebar.block.base.RebarVirtualInventoryBlock;
+import io.github.pylonmc.rebar.block.interfaces.GuiRebarBlock;
+import io.github.pylonmc.rebar.block.interfaces.LogisticRebarBlock;
+import io.github.pylonmc.rebar.block.interfaces.VirtualInventoryRebarBlock;
 import io.github.pylonmc.rebar.block.context.BlockBreakContext;
 import io.github.pylonmc.rebar.block.context.BlockCreateContext;
 import io.github.pylonmc.rebar.logistics.LogisticGroup;
@@ -39,7 +39,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
-public class SingleItemStorageBlock extends RebarBlock implements RebarGuiBlock, RebarVirtualInventoryBlock, org.bukkit.inventory.InventoryHolder, RebarLogisticBlock {
+public class SingleItemStorageBlock extends RebarBlock implements GuiRebarBlock, VirtualInventoryRebarBlock, org.bukkit.inventory.InventoryHolder, LogisticRebarBlock {
 
     public static class Item extends RebarItem {
         public Item(@NotNull ItemStack stack) {
@@ -216,9 +216,9 @@ public class SingleItemStorageBlock extends RebarBlock implements RebarGuiBlock,
     }
 
     @Override
-    public void onBreak(@NotNull List<@NotNull ItemStack> drops, @NotNull BlockBreakContext context) {
+    public void onBlockBreak(@NotNull List<@NotNull ItemStack> drops, @NotNull BlockBreakContext context) {
         // 创建自定义掉落物品（使用注册的RebarItem）
-        ItemStack dropItem = ItemStackBuilder.rebar(Material.RED_TERRACOTTA, io.github.lyen.LogiTech.core.Register.RegisterKeys.QUANTUM_STORAGE)
+        ItemStack dropItem = ItemStackBuilder.rebar(Material.RED_TERRACOTTA, io.github.lyen.LogiTech.Core.Register.RegisterKeys.QUANTUM_STORAGE)
                 .name("<gold>量子存储(∞)")
                 .build();
         
@@ -365,7 +365,7 @@ public class SingleItemStorageBlock extends RebarBlock implements RebarGuiBlock,
         return storedAmount;
     }
 
-    // ===== RebarLogisticBlock 接口实现 =====
+    // ===== LogisticRebarBlock 接口实现 =====
     
     @Override
     public @NotNull Map<@NotNull String, @NotNull LogisticGroup> getLogisticGroups() {

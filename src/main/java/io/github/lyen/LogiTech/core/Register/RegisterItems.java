@@ -1,24 +1,26 @@
-package io.github.lyen.LogiTech.core.Register;
+package io.github.lyen.LogiTech.Core.Register;
 
-import io.github.lyen.LogiTech.core.Storage.MemoryBlock;
-import io.github.lyen.LogiTech.core.basic.SpecialItems.CheatGuideItem;
-import io.github.lyen.LogiTech.core.basic.SpecialItems.MemoryCardItem;
-import io.github.lyen.LogiTech.core.Storage.SingleItemStorageBlock;
-import io.github.lyen.LogiTech.core.Storage.StorageBlock;
-import io.github.lyen.LogiTech.core.basic.AbstractItems.SimpleMaterialItem;
-import io.github.lyen.LogiTech.core.basic.AbstractItems.SkullBuilder;
-import io.github.lyen.LogiTech.core.basic.Network.NetworkBridgeBlock;
-import io.github.lyen.LogiTech.core.basic.Network.NetworkGridBlock;
-import io.github.lyen.LogiTech.core.basic.Network.NetworkMonitorBlock;
-import io.github.lyen.LogiTech.core.basic.Network.NetworkPullerBlock;
-import io.github.lyen.LogiTech.core.basic.Network.NetworkPusherBlock;
-import io.github.lyen.LogiTech.core.basic.SpecialItems.BugItemManager;
-import io.github.lyen.LogiTech.core.basic.SpecialItems.KnowledgeBook;
-import io.github.lyen.LogiTech.core.basic.SpecialItems.MemoryCard;
-import io.github.lyen.LogiTech.core.basic.SpecialItems.PortableEnderChest;
-import io.github.lyen.LogiTech.core.basic.SpecialItems.PortableTrashCan;
-import io.github.lyen.LogiTech.core.basic.SpecialItems.PortableWorkbench;
-import io.github.lyen.LogiTech.core.basic.SpecialItems.StorageBag;
+import io.github.lyen.LogiTech.Core.Basic.AbstractItems.SimpleMaterialItem;
+import io.github.lyen.LogiTech.Core.Basic.AbstractItems.SkullBuilder;
+import io.github.lyen.LogiTech.Core.Basic.Network.NetworkBridgeBlock;
+import io.github.lyen.LogiTech.Core.Basic.Network.NetworkGridBlock;
+import io.github.lyen.LogiTech.Core.Basic.Network.NetworkMonitorBlock;
+import io.github.lyen.LogiTech.Core.Basic.Network.NetworkPullerBlock;
+import io.github.lyen.LogiTech.Core.Basic.Network.NetworkPusherBlock;
+import io.github.lyen.LogiTech.Core.Basic.Network.FluidExporterBlock;
+import io.github.lyen.LogiTech.Core.Basic.Network.FluidImporterBlock;
+import io.github.lyen.LogiTech.Core.Basic.SpecialItems.BugItemManager;
+import io.github.lyen.LogiTech.Core.Basic.SpecialItems.CheatGuideItem;
+import io.github.lyen.LogiTech.Core.Basic.SpecialItems.KnowledgeBook;
+import io.github.lyen.LogiTech.Core.Basic.SpecialItems.MemoryCard;
+import io.github.lyen.LogiTech.Core.Basic.SpecialItems.MemoryCardItem;
+import io.github.lyen.LogiTech.Core.Basic.SpecialItems.PortableEnderChest;
+import io.github.lyen.LogiTech.Core.Basic.SpecialItems.PortableTrashCan;
+import io.github.lyen.LogiTech.Core.Basic.SpecialItems.PortableWorkbench;
+import io.github.lyen.LogiTech.Core.Basic.SpecialItems.StorageBag;
+import io.github.lyen.LogiTech.Core.Basic.Storage.MemoryBlock;
+import io.github.lyen.LogiTech.Core.Basic.Storage.SingleItemStorageBlock;
+import io.github.lyen.LogiTech.Core.Basic.Storage.StorageBlock;
 import io.github.pylonmc.rebar.item.RebarItem;
 import io.github.pylonmc.rebar.item.builder.ItemStackBuilder;
 
@@ -72,6 +74,11 @@ public final class RegisterItems {
     public static final ItemStack MEMORY_CARD_1K = createMemoryCard(Material.MUSIC_DISC_CAT, RegisterKeys.MEMORY_CARD_1K);
     public static final ItemStack MEMORY_CARD_4K = createMemoryCard(Material.MUSIC_DISC_BLOCKS, RegisterKeys.MEMORY_CARD_4K);
     public static final ItemStack MEMORY_CARD_16K = createMemoryCard(Material.MUSIC_DISC_FAR, RegisterKeys.MEMORY_CARD_16K);
+    public static final ItemStack MEMORY_CARD_64K = createMemoryCard(Material.MUSIC_DISC_CHIRP, RegisterKeys.MEMORY_CARD_64K);
+    public static final ItemStack MEMORY_CARD_256K = createMemoryCard(Material.MUSIC_DISC_WAIT, RegisterKeys.MEMORY_CARD_256K);
+    public static final ItemStack MEMORY_CARD_1M = createMemoryCard(Material.MUSIC_DISC_STRAD, RegisterKeys.MEMORY_CARD_1M);
+    public static final ItemStack MEMORY_CARD_4M = createMemoryCard(Material.MUSIC_DISC_MELLOHI, RegisterKeys.MEMORY_CARD_4M);
+    public static final ItemStack MEMORY_CARD_16M = createMemoryCard(Material.MUSIC_DISC_MALL, RegisterKeys.MEMORY_CARD_16M);
 
     // 学识巨著
     public static final ItemStack KNOWLEDGE_BOOK = ItemStackBuilder.rebar(Material.KNOWLEDGE_BOOK, RegisterKeys.KNOWLEDGE_BOOK)
@@ -113,14 +120,20 @@ public final class RegisterItems {
     public static final ItemStack NETWORK_GRID = ItemStackBuilder.rebar(Material.NOTE_BLOCK, RegisterKeys.NETWORK_GRID)
             .build();
 
+    // 流体网络物品（名称/描述由 lang/zh_CN.yml 提供）
+    public static final ItemStack NETWORK_FLUID_EXPORTER = ItemStackBuilder.rebar(Material.LIGHT_BLUE_STAINED_GLASS, RegisterKeys.NETWORK_FLUID_EXPORTER)
+            .build();
+    public static final ItemStack NETWORK_FLUID_IMPORTER = ItemStackBuilder.rebar(Material.CYAN_STAINED_GLASS, RegisterKeys.NETWORK_FLUID_IMPORTER)
+            .build();
+
     // Rebar Guide(作弊版)：knowledge_book 材质，无配方，仅放于管理专用物品组
     public static final ItemStack CHEAT_GUIDE = ItemStackBuilder.rebar(Material.KNOWLEDGE_BOOK, RegisterKeys.CHEAT_GUIDE)
             .build();
 
 
     /** 容量卡编号发号器（持久化，跨重启递增） */
-    private static final io.github.lyen.LogiTech.core.basic.SpecialItems.MemoryCardIdIssuer CARD_ID_ISSUER =
-            new io.github.lyen.LogiTech.core.basic.SpecialItems.MemoryCardIdIssuer();
+    private static final io.github.lyen.LogiTech.Core.Basic.SpecialItems.MemoryCardIdIssuer CARD_ID_ISSUER =
+            new io.github.lyen.LogiTech.Core.Basic.SpecialItems.MemoryCardIdIssuer();
 
     /**
      * 创建容量卡模板：唱片材质、不可堆叠；名称与 lore 由 zh_CN.yml 翻译键提供（不要在此硬编码，否则 lore 会重复）
@@ -143,13 +156,24 @@ public final class RegisterItems {
         Group.STORAGE.addItem(MEMORY_BLOCK);
 
         // 容量卡 -> 注册到 Rebar（/rb give 可获取）并加入 STORAGE 物品组
-        // 用 MemoryCardItem：物品实例化时分配唯一编号（不可堆叠）
+        // 编号在卡【放入存储器卡槽】时才分配（不能在物品构造函数里发号，
+        // Rebar 发包翻译会高频反射调用构造函数，否则编号会被刷爆）
         RebarItem.register(MemoryCardItem.class, MEMORY_CARD_1K, RegisterKeys.MEMORY_CARD_1K);
         RebarItem.register(MemoryCardItem.class, MEMORY_CARD_4K, RegisterKeys.MEMORY_CARD_4K);
         RebarItem.register(MemoryCardItem.class, MEMORY_CARD_16K, RegisterKeys.MEMORY_CARD_16K);
+        RebarItem.register(MemoryCardItem.class, MEMORY_CARD_64K, RegisterKeys.MEMORY_CARD_64K);
+        RebarItem.register(MemoryCardItem.class, MEMORY_CARD_256K, RegisterKeys.MEMORY_CARD_256K);
+        RebarItem.register(MemoryCardItem.class, MEMORY_CARD_1M, RegisterKeys.MEMORY_CARD_1M);
+        RebarItem.register(MemoryCardItem.class, MEMORY_CARD_4M, RegisterKeys.MEMORY_CARD_4M);
+        RebarItem.register(MemoryCardItem.class, MEMORY_CARD_16M, RegisterKeys.MEMORY_CARD_16M);
         Group.STORAGE.addItem(MEMORY_CARD_1K);
         Group.STORAGE.addItem(MEMORY_CARD_4K);
         Group.STORAGE.addItem(MEMORY_CARD_16K);
+        Group.STORAGE.addItem(MEMORY_CARD_64K);
+        Group.STORAGE.addItem(MEMORY_CARD_256K);
+        Group.STORAGE.addItem(MEMORY_CARD_1M);
+        Group.STORAGE.addItem(MEMORY_CARD_4M);
+        Group.STORAGE.addItem(MEMORY_CARD_16M);
 
         // Rebar Guide(作弊版) -> ADMIN 物品组（管理专用，无配方）
         RebarItem.register(CheatGuideItem.class, CHEAT_GUIDE, RegisterKeys.CHEAT_GUIDE);
@@ -211,6 +235,12 @@ public final class RegisterItems {
         
         RebarItem.register(NetworkGridBlock.Item.class, NETWORK_GRID, RegisterKeys.NETWORK_GRID);
         Group.NETWORK.addItem(NETWORK_GRID);
+
+        // 流体网络物品 -> NETWORK 物品组
+        RebarItem.register(FluidExporterBlock.Item.class, NETWORK_FLUID_EXPORTER, RegisterKeys.NETWORK_FLUID_EXPORTER);
+        Group.NETWORK.addItem(NETWORK_FLUID_EXPORTER);
+        RebarItem.register(FluidImporterBlock.Item.class, NETWORK_FLUID_IMPORTER, RegisterKeys.NETWORK_FLUID_IMPORTER);
+        Group.NETWORK.addItem(NETWORK_FLUID_IMPORTER);
 
         System.out.println("[LogiTech] 物品注册完成");
         System.out.println("[LogiTech] 物品已分配到对应物品组");
