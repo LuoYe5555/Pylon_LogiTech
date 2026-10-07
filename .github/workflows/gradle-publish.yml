@@ -87,18 +87,16 @@ jobs:
           set -euo pipefail
           mkdir -p dist
 
-          MAIN_JAR="$(ls -1 build/libs/*.jar | grep -vE '(-sources|-javadoc)\.jar$' | head -n 1 || true)"
+          # shadowJar 固定输出 LogiTech.jar；普通 jar 任务会多出一个带版本号的，只认固定名
+          MAIN_JAR="build/libs/LogiTech.jar"
 
-          if [ -z "$MAIN_JAR" ]; then
-            echo "No main jar found in build/libs/. Build may have failed or packaging differs."
+          if [ ! -f "$MAIN_JAR" ]; then
+            echo "No $MAIN_JAR found. Build may have failed or packaging differs."
+            ls -la build/libs/ || true
             exit 1
           fi
 
           cp "$MAIN_JAR" dist/
-
-          if ls build/libs/*-sources.jar >/dev/null 2>&1; then
-            cp build/libs/*-sources.jar dist/
-          fi
 
           echo "files=$(ls -1 dist | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
 
